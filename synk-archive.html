@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SYNK ARCHIVE</title>
+<style>
+:root{
+  --ink:#0b0c0e; --ink2:#101115;
+  --card:#16171b; --card2:#1c1e23;
+  --line:#26282e; --line2:#383b43;
+  --tx:#e7e9ee; --tx2:#9aa0ab; --tx3:#666b74;
+  --silver:#d9dce3; --glow:rgba(226,229,236,.22);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  background:radial-gradient(1200px 600px at 50% -10%, #1a1c21 0%, var(--ink) 55%) fixed, var(--ink);
+  color:var(--tx);
+  font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Malgun Gothic","Segoe UI",sans-serif;
+  font-size:15px; line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+#wrap{max-width:520px;margin:0 auto;min-height:100%;padding:0 16px calc(24px + env(safe-area-inset-bottom))}
+.hide{display:none !important}
+.lat{font-family:"Avenir Next","Helvetica Neue",Arial,sans-serif;letter-spacing:.24em;text-transform:uppercase}
+.chrome{
+  background:linear-gradient(180deg,#f7f8fa 0%,#c3c8d1 42%,#7e8595 52%,#dde1e8 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.hair{height:1px;background:linear-gradient(90deg,transparent,var(--line2),transparent);border:0}
+
+/* ── header ── */
+header{padding:calc(18px + env(safe-area-inset-top)) 2px 14px;display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
+.brand .t{font-size:15px;font-weight:800}
+.brand .s{font-size:11px;color:var(--tx3);margin-top:2px;letter-spacing:.08em}
+#hDday{font-size:34px;font-weight:800;line-height:1;letter-spacing:.02em;cursor:pointer;text-align:right}
+#hDday small{display:block;font-size:9px;color:var(--tx3);letter-spacing:.3em;margin-bottom:4px;text-align:right}
+
+/* ── common ui ── */
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px}
+.btn{
+  appearance:none;border:1px solid var(--line2);border-radius:10px;cursor:pointer;
+  background:linear-gradient(180deg,#262931,#191b20);color:var(--tx);
+  font-size:13px;font-weight:600;padding:10px 14px;font-family:inherit;
+}
+.btn:active{transform:translateY(1px)}
+.btn.pri{background:linear-gradient(180deg,#eef0f4,#b9bec8);color:#111318;border-color:#e2e5eb}
+.btn.ghost{background:none;border-color:var(--line)}
+.btn.sm{padding:6px 10px;font-size:12px;border-radius:8px}
+.ico{appearance:none;background:none;border:0;color:var(--tx2);font-size:20px;cursor:pointer;padding:6px 10px;font-family:inherit}
+.label{font-size:10px;color:var(--tx3);letter-spacing:.28em;text-transform:uppercase;font-weight:700;margin-bottom:8px}
+input[type=text],input[type=date],textarea{
+  width:100%;background:var(--ink2);border:1px solid var(--line);border-radius:10px;
+  color:var(--tx);font-size:16px;padding:11px 12px;font-family:inherit;outline:none;
+}
+input:focus,textarea:focus{border-color:var(--line2)}
+textarea{resize:none;line-height:1.65;min-height:52px;overflow:hidden}
+textarea::placeholder,input::placeholder{color:#575c66}
+.tx{background:transparent;border:0;border-radius:0;padding:4px 2px;font-size:16px;line-height:1.75;min-height:56px}
+.tx:focus{box-shadow:inset 2px 0 0 #9aa0ab;padding-left:10px}
+.tx.first{min-height:130px}
+#eTitleBox{margin-top:14px}
+.eTitleIn{background:transparent;border:0;border-radius:0;padding:2px 0;font-size:21px;font-weight:800}
+.eTitleV{font-size:21px;font-weight:800;margin-top:14px;line-height:1.4}
+.inlineAdd{display:flex;gap:8px;margin:8px 0 20px}
+.inlineAdd .btn{flex:1;background:var(--card);border-style:dashed;color:var(--tx2)}
+/* quick capture */
+.qtx{background:transparent;border:0;border-radius:0;padding:4px 2px;font-size:16px;line-height:1.7;min-height:48px}
+.qrow{display:flex;gap:8px;margin-top:10px}
+.qrow .btn{flex:1}
+.qhead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.qdate{font-size:11px;color:var(--tx3)}
+.qthumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.qth{position:relative;width:58px;height:58px;border-radius:10px;overflow:hidden;border:1px solid var(--line2)}
+.qth img{width:100%;height:100%;object-fit:cover;display:block}
+.qth button{position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:50%;border:0;background:rgba(10,11,13,.85);color:var(--tx);font-size:10px;line-height:1;cursor:pointer}
+.tchip{display:inline-block;font-size:10px;color:var(--tx2);letter-spacing:.16em;border:1px solid var(--line);border-radius:999px;padding:3px 11px;margin:2px 0 10px;background:var(--card)}
+#qbar{position:fixed;left:0;right:0;bottom:0;z-index:20;padding:10px 16px calc(12px + env(safe-area-inset-bottom));background:linear-gradient(180deg,rgba(11,12,14,0),rgba(11,12,14,.94) 30%)}
+#qbar .inner{max-width:520px;margin:0 auto;background:var(--card);border:1px solid var(--line2);border-radius:16px;padding:8px 10px}
+.qline{display:flex;align-items:flex-end;gap:6px}
+.qline .qtx{flex:1;min-height:26px;padding:7px 2px;font-size:15px}
+.qline .ico{padding:6px 8px;font-size:17px}
+
+/* ── calendar ── */
+.calCard{margin-bottom:14px}
+.calHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.calTitle{font-size:19px;font-weight:800;letter-spacing:.14em}
+.dowRow,.calGrid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.dow{text-align:center;font-size:10px;color:var(--tx3);padding:4px 0;letter-spacing:.1em}
+.cell{
+  position:relative;aspect-ratio:1/1.18;border-radius:10px;border:1px solid transparent;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;cursor:pointer;
+}
+.cell:not(.empty):active{background:var(--card2)}
+.cell .dn{font-size:13px;font-weight:600;color:var(--tx)}
+.cell .dd{font-size:8.5px;color:var(--tx3);height:12px;letter-spacing:.02em}
+.cell .dot{position:absolute;bottom:5px;width:4px;height:4px;border-radius:50%;background:var(--silver);box-shadow:0 0 6px var(--glow)}
+.cell.today{border-color:var(--line2);background:var(--card)}
+.cell.mile{border-color:#b9bec8;box-shadow:0 0 12px var(--glow)}
+.cell.mile .dd{color:#e7e9ee;font-weight:700}
+.legend{font-size:10.5px;color:var(--tx3);margin-top:10px;text-align:center;letter-spacing:.06em}
+
+/* ── recent ── */
+.recRow{display:flex;gap:12px;align-items:baseline;padding:11px 2px;border-bottom:1px solid var(--line);cursor:pointer}
+.recRow:last-child{border-bottom:0}
+.recRow .rd{font-size:12px;color:var(--tx2);white-space:nowrap;font-weight:700}
+.recRow .rdd{font-size:10px;color:var(--tx3);white-space:nowrap}
+.recRow .rs{font-size:13px;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.recEmpty{font-size:12.5px;color:var(--tx3);padding:8px 2px}
+.footRow{display:flex;justify-content:center;margin-top:16px}
+
+/* ── entry ── */
+.eHead{display:flex;align-items:center;justify-content:space-between;padding:6px 0 12px}
+.eMeta{padding:2px 2px 14px}
+.eDate{font-size:20px;font-weight:800;letter-spacing:.04em}
+.eSub{font-size:12px;color:var(--tx3);margin-top:3px;letter-spacing:.05em}
+.dpill{
+  display:inline-block;margin-top:10px;padding:7px 16px;border-radius:999px;
+  background:linear-gradient(180deg,#f2f3f6,#b6bbc5);color:#101216;
+  font-weight:800;font-size:15px;letter-spacing:.06em;box-shadow:0 0 16px var(--glow);
+}
+#blocks{padding-bottom:150px}
+.blk{position:relative;margin-bottom:14px}
+.blk.focus>.btools{opacity:1}
+.btools{
+  position:absolute;top:-11px;right:6px;display:flex;gap:2px;opacity:.55;z-index:2;
+  background:var(--card2);border:1px solid var(--line2);border-radius:8px;padding:1px;
+}
+.btools button{appearance:none;background:none;border:0;color:var(--tx2);font-size:13px;padding:4px 8px;cursor:pointer;font-family:inherit}
+.btools button:active{color:var(--tx)}
+.v-tx{font-size:15.5px;line-height:1.8;white-space:pre-wrap;word-break:break-word;padding:2px}
+figure.ph{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+figure.ph img{width:100%;display:block}
+figure.ph figcaption{font-size:12px;color:var(--tx2);padding:9px 12px}
+.blk .cap{border:0;border-top:1px solid var(--line);border-radius:0;background:var(--card);font-size:13px}
+.phEmpty{width:100%;aspect-ratio:4/3;background:var(--card2);display:flex;align-items:center;justify-content:center;color:var(--tx3);font-size:12px}
+
+/* chat */
+.chatbox{background:var(--ink2);border:1px solid var(--line);border-radius:14px;padding:12px}
+.chatHd{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.chatHd .l{font-size:10px;color:var(--tx3);letter-spacing:.24em;font-weight:700}
+.msg{display:flex;flex-direction:column;align-items:flex-start;margin-bottom:7px}
+.msg.me{align-items:flex-end}
+.mname{font-size:10.5px;color:var(--tx3);margin:4px 0 3px 4px}
+.mrow{display:flex;align-items:flex-end;gap:6px;max-width:88%}
+.msg.me .mrow{flex-direction:row-reverse}
+.mb{background:#22252b;border:1px solid var(--line);padding:7px 11px;border-radius:4px 13px 13px 13px;font-size:13.5px;white-space:pre-wrap;word-break:break-word}
+.msg.me .mb{background:linear-gradient(180deg,#e8eaef,#c6cbd4);color:#14161a;border-color:#dfe2e8;border-radius:13px 4px 13px 13px}
+.mt{font-size:9.5px;color:var(--tx3);white-space:nowrap}
+.chatMore{text-align:center;font-size:11px;color:var(--tx3);padding:6px 0 0}
+
+/* add bar */
+#addbar{
+  position:fixed;left:0;right:0;bottom:0;z-index:20;
+  padding:10px 16px calc(12px + env(safe-area-inset-bottom));
+  background:linear-gradient(180deg,rgba(11,12,14,0),rgba(11,12,14,.92) 34%);
+}
+#addbar .inner{max-width:520px;margin:0 auto}
+#addbar .row{display:flex;gap:8px}
+#addbar .row .btn{flex:1}
+#addbar .hint{font-size:10px;color:var(--tx3);text-align:center;margin-top:7px;letter-spacing:.05em}
+
+/* settings */
+.frow{margin-bottom:16px}
+.frow .fl{font-size:12px;color:var(--tx2);margin-bottom:6px;font-weight:600}
+.frow .fh{font-size:11px;color:var(--tx3);margin-top:5px}
+.setBtns{display:flex;flex-direction:column;gap:9px;margin-top:6px}
+
+/* modal / toast / loader */
+#modal{position:fixed;inset:0;z-index:50;background:rgba(5,6,8,.72);display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(3px)}
+#mBody{width:100%;max-width:520px;background:var(--card);border:1px solid var(--line2);border-radius:18px 18px 0 0;padding:20px 18px calc(20px + env(safe-area-inset-bottom));max-height:86vh;overflow:auto}
+.mTitle{font-size:15px;font-weight:800;margin-bottom:12px}
+.mrowBtn{display:flex;gap:8px;margin-top:16px}
+.mrowBtn .btn{flex:1}
+.cf{font-size:14px;color:var(--tx)}
+.chkRow{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px;color:var(--tx2)}
+.chkRow input{width:17px;height:17px;accent-color:#c6cbd4}
+#toast{
+  position:fixed;left:50%;bottom:calc(86px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(8px);
+  background:#e8eaef;color:#14161a;font-size:12.5px;font-weight:700;padding:9px 16px;border-radius:999px;
+  opacity:0;pointer-events:none;transition:.2s;z-index:60;white-space:nowrap;max-width:92vw;overflow:hidden;text-overflow:ellipsis;
+}
+#toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+#loader{padding:70px 0;text-align:center;color:var(--tx3);font-size:12px;letter-spacing:.3em}
+.loading{padding:30px 0;text-align:center;color:var(--tx3);font-size:12px}
+@media (prefers-reduced-motion:reduce){*{transition:none !important}}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <header>
+    <div class="brand">
+      <div class="t lat chrome">Synk Archive</div>
+      <div class="s" id="hNames">✦ 우리의 기록</div>
+    </div>
+    <div id="hDday" class="chrome" title="오늘 일기 열기"><small class="lat">D-Day</small><span id="hDdayNum">—</span></div>
+  </header>
+  <hr class="hair">
+
+  <div id="loader" class="lat">Loading ✦</div>
+
+  <!-- 달력 -->
+  <section id="scr-cal" class="hide">
+    <div class="card" style="margin-bottom:14px">
+      <div class="qhead"><span class="label lat" style="margin:0">Quick Log</span><span class="qdate" id="hQdate">—</span></div>
+      <textarea id="hQtx" class="qtx" placeholder="지금 떠오르는 걸 그냥 적어요 — 날짜·시간은 알아서 붙어요"></textarea>
+      <div class="qthumbs hide" id="hQthumbs"></div>
+      <div class="qrow"><button class="btn" id="hQph">📷 사진</button><button class="btn pri" id="hQgo">기록 ✦</button></div>
+    </div>
+    <div class="card calCard">
+      <div class="calHead">
+        <button class="ico" id="prevM">‹</button>
+        <div class="calTitle lat chrome" id="calTitle">—</div>
+        <button class="ico" id="nextM">›</button>
+      </div>
+      <div class="dowRow" id="calDow"></div>
+      <div class="calGrid" id="calDays"></div>
+      <div class="legend">날짜를 누르면 일기를 쓰거나 볼 수 있어요 · ● 기록 있음 · ✦ 100일 단위</div>
+    </div>
+    <div class="card">
+      <div class="label lat">Recent Log</div>
+      <div id="recentList"></div>
+    </div>
+    <div class="footRow"><button class="btn ghost" id="goSet">⚙ 설정 · 백업</button></div>
+  </section>
+
+  <!-- 일기 -->
+  <section id="scr-entry" class="hide">
+    <div class="eHead">
+      <button class="ico" id="eBack">‹ 달력</button>
+      <div style="display:flex;gap:6px">
+        <button class="btn sm ghost" id="eDel">삭제</button>
+        <button class="btn sm pri" id="eMode">편집</button>
+      </div>
+    </div>
+    <div class="eMeta">
+      <div class="eDate chrome" id="eDate">—</div>
+      <div class="eSub" id="eSub">—</div>
+      <div><span class="dpill" id="eDday">D+—</span></div>
+      <div id="eTitleBox"></div>
+    </div>
+    <hr class="hair" style="margin-bottom:16px">
+    <div id="blocks"></div>
+  </section>
+
+  <!-- 설정 -->
+  <section id="scr-set" class="hide">
+    <div class="eHead">
+      <button class="ico" id="sBack">‹ 달력</button>
+      <div class="label lat" style="margin:0">Settings</div>
+    </div>
+    <div class="card" style="margin-bottom:12px">
+      <div class="frow">
+        <div class="fl">처음 만난 날 (D+1)</div>
+        <input type="date" id="inStart">
+        <div class="fh">이 날짜 기준으로 디데이가 계산돼요. 200일은 달력에 ✦로 표시돼요.</div>
+      </div>
+      <div class="frow">
+        <div class="fl">내 이름 (카톡 대화명과 동일하게)</div>
+        <input type="text" id="inMe" placeholder="예: 수정">
+        <div class="fh">카톡 대화를 불러올 때 내 말풍선을 구분하는 데 써요.</div>
+      </div>
+      <div class="frow" style="margin-bottom:8px">
+        <div class="fl">상대 이름</div>
+        <input type="text" id="inYou" placeholder="예: ○○">
+      </div>
+      <button class="btn pri" id="sSave" style="width:100%">저장</button>
+    </div>
+    <div class="card">
+      <div class="label lat">Backup</div>
+      <div class="setBtns">
+        <button class="btn" id="btnExport">⬇ 전체 백업 내려받기 (사진 포함 JSON)</button>
+        <button class="btn ghost" id="btnImport">⬆ 백업 파일 불러오기</button>
+      </div>
+      <div class="fh" style="margin-top:10px">기록은 자동 저장되지만, 가끔 백업 파일을 내려받아 두면 어떤 경우에도 소실되지 않아요.</div>
+    </div>
+  </section>
+</div>
+
+<div id="addbar" class="hide">
+  <div class="inner">
+    <div class="row">
+      <button class="btn" id="addText">＋ 글</button>
+      <button class="btn" id="addPhoto">＋ 사진</button>
+      <button class="btn" id="addChat">＋ 카톡</button>
+    </div>
+    <div class="hint">선택한 블록 아래에 추가 · 블록 도구 ↑↓＋✕ 로 이동·삽입·삭제</div>
+  </div>
+</div>
+
+<div id="qbar" class="hide">
+  <div class="inner">
+    <div class="qthumbs hide" id="eQthumbs"></div>
+    <div class="qline">
+      <button class="ico" id="eQph">📷</button>
+      <textarea id="eQtx" class="qtx" placeholder="이 날에 덧붙이기…"></textarea>
+      <button class="btn pri sm" id="eQgo">✦ 기록</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal" class="hide"><div id="mBody"></div></div>
+<div id="toast"></div>
+<input type="file" id="fileP" accept="image/*" multiple hidden>
+<input type="file" id="fileQ" accept="image/*" multiple hidden>
+<input type="file" id="fileI" accept="application/json,.json" hidden>
+
+<script>
+'use strict';
+const $=s=>document.querySelector(s);
+const DOW=['일','월','화','수','목','금','토'];
+const K={set:'synk:settings',idx:'synk:index',e:d=>'synk:entry:'+d,p:id=>'synk:photo:'+id};
+const S={set:{startDate:null,myName:'',partnerName:''},idx:[],cur:null,mode:'view',month:new Date(),focus:-1,dirty:false};
+const PC={}; // photo cache
+const mem={}; // in-memory fallback
+
+/* ── storage ── */
+async function sGet(k){
+  try{const r=await window.storage.get(k,false);return (r&&r.value!=null)?JSON.parse(r.value):(k in mem?mem[k]:null)}
+  catch(e){return k in mem?mem[k]:null}
+}
+async function sSet(k,v){
+  mem[k]=v;
+  try{const r=await window.storage.set(k,JSON.stringify(v),false);if(!r)warnSave()}
+  catch(e){warnSave()}
+}
+async function sDel(k){delete mem[k];try{await window.storage.delete(k,false)}catch(e){}}
+let warned=false;
+function warnSave(){if(warned)return;warned=true;toast('저장소 오류 — 설정에서 백업 파일을 꼭 내려받아 두세요')}
+
+/* ── utils ── */
+function pad(n){return String(n).padStart(2,'0')}
+function ymd(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
+function parseYmd(s){const a=s.split('-').map(Number);return new Date(a[0],a[1]-1,a[2])}
+function utc(s){const a=s.split('-').map(Number);return Date.UTC(a[0],a[1]-1,a[2])}
+function dday(s){if(!S.set.startDate)return null;return Math.round((utc(s)-utc(S.set.startDate))/864e5)+1}
+function ddayLabel(n){return n>0?'D+'+n:'D-'+(1-n)}
+function fmtDate(s){const d=parseYmd(s);return d.getFullYear()+'.'+pad(d.getMonth()+1)+'.'+pad(d.getDate())+' '+DOW[d.getDay()]}
+function fmtTime(ts){const d=new Date(ts);return pad(d.getHours())+':'+pad(d.getMinutes())}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c])}
+let tt;
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('on'),2200)}
+function modal(html){$('#mBody').innerHTML=html;$('#modal').classList.remove('hide')}
+function closeModal(){$('#modal').classList.add('hide')}
+function confirmM(msg,onYes){
+  modal('<p class="cf">'+esc(msg)+'</p><div class="mrowBtn"><button class="btn" id="mNo">취소</button><button class="btn pri" id="mYes">확인</button></div>');
+  $('#mNo').onclick=closeModal;
+  $('#mYes').onclick=()=>{closeModal();onYes()};
+}
+$('#modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()});
+
+/* ── screens ── */
+function show(name){
+  ['cal','entry','set'].forEach(n=>$('#scr-'+n).classList.toggle('hide',n!==name));
+  $('#addbar').classList.toggle('hide',!(name==='entry'&&S.mode==='edit'));
+  $('#qbar').classList.toggle('hide',!(name==='entry'&&S.mode==='view'));
+  window.scrollTo(0,0);
+}
+
+/* ── header ── */
+function renderHeader(){
+  const me=S.set.myName||'나',you=S.set.partnerName||'너';
+  $('#hNames').textContent='✦ '+me+' × '+you;
+  const td=ymd(new Date());
+  $('#hQdate').textContent=fmtDate(td)+(S.set.startDate?' · '+ddayLabel(dday(td)):'');
+  const el=$('#hDdayNum');
+  if(!S.set.startDate){el.textContent='설정';return}
+  el.textContent=ddayLabel(dday(td));
+}
+$('#hDday').onclick=()=>{if(!S.set.startDate){openSettings();return}openEntry(ymd(new Date()))};
+
+/* ── calendar ── */
+$('#calDow').innerHTML=DOW.map(d=>'<div class="dow">'+d+'</div>').join('');
+function renderCal(){
+  const y=S.month.getFullYear(),m=S.month.getMonth();
+  $('#calTitle').textContent=y+'. '+pad(m+1);
+  const start=new Date(y,m,1).getDay();
+  const days=new Date(y,m+1,0).getDate();
+  const today=ymd(new Date());
+  const has=new Set(S.idx.map(o=>o.d));
+  let h='';
+  for(let i=0;i<start;i++)h+='<div class="cell empty"></div>';
+  for(let d=1;d<=days;d++){
+    const ds=y+'-'+pad(m+1)+'-'+pad(d);
+    const dn=dday(ds);
+    const mile=dn!==null&&dn>0&&dn%100===0;
+    h+='<div class="cell'+(ds===today?' today':'')+(mile?' mile':'')+'" data-d="'+ds+'">'
+      +'<span class="dn">'+d+'</span>'
+      +'<span class="dd">'+(dn!==null&&dn>0?(mile?'✦':'')+dn:'')+'</span>'
+      +(has.has(ds)?'<span class="dot"></span>':'')
+      +'</div>';
+  }
+  $('#calDays').innerHTML=h;
+}
+$('#calDays').addEventListener('click',e=>{
+  const c=e.target.closest('.cell');
+  if(c&&c.dataset.d)openEntry(c.dataset.d);
+});
+$('#prevM').onclick=()=>{S.month=new Date(S.month.getFullYear(),S.month.getMonth()-1,1);renderCal()};
+$('#nextM').onclick=()=>{S.month=new Date(S.month.getFullYear(),S.month.getMonth()+1,1);renderCal()};
+
+function renderRecent(){
+  const el=$('#recentList');
+  if(!S.idx.length){el.innerHTML='<div class="recEmpty">아직 기록이 없어요. 달력에서 오늘을 눌러 첫 일기를 남겨보세요 ✦</div>';return}
+  el.innerHTML=S.idx.slice(0,5).map(o=>{
+    const dn=dday(o.d);
+    const extra=(o.p?' 📷'+o.p:'')+(o.c?' 💬':'');
+    return '<div class="recRow" data-d="'+o.d+'">'
+      +'<span class="rd">'+fmtDate(o.d).slice(5)+'</span>'
+      +'<span class="rdd">'+(dn&&dn>0?'D+'+dn:'')+'</span>'
+      +'<span class="rs">'+esc(o.s||'(내용 없음)')+extra+'</span>'
+      +'</div>';
+  }).join('');
+}
+$('#recentList').addEventListener('click',e=>{
+  const r=e.target.closest('.recRow');
+  if(r)openEntry(r.dataset.d);
+});
+$('#goSet').onclick=()=>openSettings();
+
+/* ── entry ── */
+async function openEntry(ds){
+  await flushSave();
+  show('entry');
+  $('#blocks').innerHTML='<div class="loading">불러오는 중…</div>';
+  let e=await sGet(K.e(ds));
+  let isNew=false;
+  if(!e){isNew=true;e={date:ds,createdAt:Date.now(),updatedAt:Date.now(),blocks:[{type:'text',text:''}]}}
+  if(!Array.isArray(e.blocks))e.blocks=[];
+  S.cur=e;S.mode=isNew?'edit':'view';S.focus=-1;S.dirty=false;
+  const ids=e.blocks.filter(b=>b.type==='photo'&&!(b.id in PC)).map(b=>b.id);
+  await Promise.all(ids.map(async id=>{PC[id]=await sGet(K.p(id))}));
+  renderEntry();
+}
+function renderEntry(){
+  const e=S.cur;if(!e)return;
+  $('#eDate').textContent=fmtDate(e.date);
+  $('#eSub').textContent=fmtTime(e.createdAt)+' 작성'+(e.updatedAt&&e.updatedAt-e.createdAt>60000?' · '+fmtTime(e.updatedAt)+' 수정':'');
+  const dn=dday(e.date);
+  $('#eDday').textContent=dn!==null?ddayLabel(dn):'D-DAY 미설정';
+  $('#eMode').textContent=S.mode==='edit'?'완료':'편집';
+  $('#addbar').classList.toggle('hide',S.mode!=='edit');
+  $('#qbar').classList.toggle('hide',S.mode!=='view');
+  const tb=$('#eTitleBox');
+  if(S.mode==='edit'){
+    tb.innerHTML='<input type="text" class="eTitleIn" id="eTitleIn" placeholder="제목 (선택)" value="'+esc(e.title||'')+'">';
+    $('#eTitleIn').oninput=ev=>{S.cur.title=ev.target.value;touch()};
+  }else{
+    tb.innerHTML=(e.title&&e.title.trim())?'<div class="eTitleV">'+esc(e.title)+'</div>':'';
+  }
+  renderBlocks();
+}
+function toolsHtml(i,n){
+  return '<div class="btools">'
+    +(i>0?'<button data-act="up" data-i="'+i+'">↑</button>':'')
+    +(i<n-1?'<button data-act="dn" data-i="'+i+'">↓</button>':'')
+    +'<button data-act="ins" data-i="'+i+'">＋</button>'
+    +'<button data-act="del" data-i="'+i+'">✕</button></div>';
+}
+function chatHtml(msgs,limit){
+  const list=limit?msgs.slice(0,limit):msgs;
+  let h='',prev=null;
+  for(const m of list){
+    const me=!!m.me;
+    if(!me&&m.n!==prev)h+='<div class="mname">'+esc(m.n)+'</div>';
+    h+='<div class="msg'+(me?' me':'')+'"><div class="mrow"><div class="mb">'+esc(m.x)+'</div><span class="mt">'+esc(m.t||'')+'</span></div></div>';
+    prev=m.n;
+  }
+  if(limit&&msgs.length>limit)h+='<div class="chatMore" data-act="more">… '+(msgs.length-limit)+'개 더 보기</div>';
+  return h;
+}
+function renderBlocks(){
+  const e=S.cur,edit=S.mode==='edit',n=e.blocks.length;
+  let h='',lastT=null;
+  e.blocks.forEach((b,i)=>{
+    if(!edit&&b.ts){const tc=fmtTime(b.ts);if(tc!==lastT){h+='<div class="tchip lat">'+tc+'</div>';lastT=tc}}
+    const T=edit?toolsHtml(i,n):'';
+    if(b.type==='text'){
+      h+=edit
+        ?'<div class="blk" data-i="'+i+'">'+T+'<textarea class="tx'+(i===0?' first':'')+'" data-i="'+i+'" placeholder="'+(i===0?'오늘 있었던 일을 블로그처럼 자유롭게…':'이어서 쓰기…')+'">'+esc(b.text)+'</textarea></div>'
+        :(b.text.trim()?'<div class="blk"><div class="v-tx">'+esc(b.text)+'</div></div>':'');
+    }else if(b.type==='photo'){
+      const src=PC[b.id];
+      const img=src?'<img src="'+src+'" alt="">':'<div class="phEmpty">사진을 불러올 수 없어요</div>';
+      h+=edit
+        ?'<div class="blk" data-i="'+i+'">'+T+'<figure class="ph">'+img+'</figure><input type="text" class="cap" data-i="'+i+'" placeholder="캡션 (선택)" value="'+esc(b.cap||'')+'"></div>'
+        :'<div class="blk"><figure class="ph">'+img+(b.cap?'<figcaption>'+esc(b.cap)+'</figcaption>':'')+'</figure></div>';
+    }else if(b.type==='chat'){
+      h+='<div class="blk" data-i="'+i+'">'+T
+        +'<div class="chatbox" data-i="'+i+'"><div class="chatHd"><span class="l lat">Kakao Log · '+b.msgs.length+'</span></div>'
+        +chatHtml(b.msgs,b.open?0:12)+'</div></div>';
+    }
+  });
+  if(edit)h+='<div class="inlineAdd"><button class="btn" data-add="text">＋ 글</button><button class="btn" data-add="photo">＋ 사진</button><button class="btn" data-add="chat">＋ 카톡</button></div>';
+  if(!edit&&!h)h='<div class="loading">아직 내용이 없어요</div>';
+  $('#blocks').innerHTML=h;
+  if(edit)document.querySelectorAll('#blocks textarea').forEach(grow);
+}
+function grow(el){el.style.height='auto';el.style.height=el.scrollHeight+'px'}
+
+/* block events */
+$('#blocks').addEventListener('input',e=>{
+  const t=e.target,i=+t.dataset.i;
+  if(t.classList.contains('tx')){S.cur.blocks[i].text=t.value;grow(t);touch()}
+  else if(t.classList.contains('cap')){S.cur.blocks[i].cap=t.value;touch()}
+});
+$('#blocks').addEventListener('focusin',e=>{
+  const b=e.target.closest('.blk');
+  if(b&&b.dataset.i!=null){S.focus=+b.dataset.i;markFocus()}
+});
+$('#blocks').addEventListener('click',e=>{
+  const ab=e.target.closest('[data-add]');
+  if(ab){
+    const p=S.cur.blocks.length;
+    if(ab.dataset.add==='text')doAddText(p);
+    else if(ab.dataset.add==='photo')doAddPhoto(p);
+    else doAddChat(p);
+    return;
+  }
+  const btn=e.target.closest('[data-act]');
+  const bl=e.target.closest('.blk');
+  if(bl&&bl.dataset.i!=null){S.focus=+bl.dataset.i;markFocus()}
+  if(!btn)return;
+  const act=btn.dataset.act;
+  if(act==='more'){
+    const box=btn.closest('.chatbox');const i=+box.dataset.i;
+    S.cur.blocks[i].open=true;renderBlocks();return;
+  }
+  const i=+btn.dataset.i,arr=S.cur.blocks;
+  if(act==='up'&&i>0){const x=arr[i];arr[i]=arr[i-1];arr[i-1]=x;S.focus=i-1;touch();renderBlocks()}
+  else if(act==='dn'&&i<arr.length-1){const x=arr[i];arr[i]=arr[i+1];arr[i+1]=x;S.focus=i+1;touch();renderBlocks()}
+  else if(act==='ins'){doAddText(i+1)}
+  else if(act==='del'){
+    const b=arr[i];
+    const doDel=()=>{
+      arr.splice(i,1);
+      if(b.type==='photo'){delete PC[b.id];sDel(K.p(b.id))}
+      if(!arr.length)arr.push({type:'text',text:''});
+      S.focus=-1;touch();renderBlocks();
+    };
+    if(b.type==='text'&&!b.text.trim())doDel();
+    else confirmM(b.type==='photo'?'이 사진을 지울까요?':b.type==='chat'?'이 대화 기록을 지울까요?':'이 문단을 지울까요?',doDel);
+  }
+});
+function markFocus(){
+  document.querySelectorAll('#blocks .blk').forEach(el=>el.classList.toggle('focus',+el.dataset.i===S.focus));
+}
+function insertPos(){return (S.focus>=0&&S.focus<S.cur.blocks.length)?S.focus+1:S.cur.blocks.length}
+
+/* mode / back / delete */
+$('#eMode').onclick=async()=>{
+  if(S.mode==='view'){S.mode='edit';renderEntry()}
+  else{await flushSave(true);S.mode='view';renderEntry()}
+};
+$('#eBack').onclick=async()=>{await flushSave();S.cur=null;show('cal');renderCal();renderRecent()};
+$('#eDel').onclick=()=>{
+  const e=S.cur;if(!e)return;
+  confirmM(fmtDate(e.date)+' 일기를 완전히 삭제할까요?',async()=>{
+    S.dirty=false;clearTimeout(saveTimer);
+    for(const b of e.blocks)if(b.type==='photo'){delete PC[b.id];await sDel(K.p(b.id))}
+    await sDel(K.e(e.date));
+    S.idx=S.idx.filter(o=>o.d!==e.date);
+    await sSet(K.idx,S.idx);
+    S.cur=null;show('cal');renderCal();renderRecent();toast('삭제됐어요');
+  });
+};
+
+/* ── autosave ── */
+let saveTimer=null;
+function touch(){S.dirty=true;clearTimeout(saveTimer);saveTimer=setTimeout(()=>persistEntry(),1200)}
+async function persistEntry(silent){
+  if(!S.cur||!S.dirty)return;
+  S.dirty=false;clearTimeout(saveTimer);
+  S.cur.updatedAt=Date.now();
+  await sSet(K.e(S.cur.date),S.cur);
+  await updateIndex(S.cur);
+  if(!silent)toast('자동 저장됨');
+}
+async function flushSave(withToast){
+  if(S.dirty){await persistEntry(!withToast);if(withToast)toast('저장 완료 ✦')}
+}
+document.addEventListener('visibilitychange',()=>{if(document.hidden)flushSave()});
+function snippet(e){
+  if(e.title&&e.title.trim())return e.title.trim().slice(0,42);
+  const t=e.blocks.find(b=>b.type==='text'&&b.text.trim());
+  if(t)return t.text.trim().replace(/\s+/g,' ').slice(0,42);
+  if(e.blocks.some(b=>b.type==='photo'))return '사진 기록';
+  if(e.blocks.some(b=>b.type==='chat'))return '대화 기록';
+  return '';
+}
+function isEmpty(e){return !(e.title&&e.title.trim())&&e.blocks.every(b=>b.type==='text'&&!b.text.trim())}
+async function updateIndex(e){
+  const row={d:e.date,s:snippet(e),p:e.blocks.filter(b=>b.type==='photo').length,c:e.blocks.filter(b=>b.type==='chat').length};
+  const i=S.idx.findIndex(o=>o.d===e.date);
+  if(isEmpty(e)){
+    if(i>=0){S.idx.splice(i,1);await sDel(K.e(e.date));await sSet(K.idx,S.idx)}
+  }else{
+    if(i>=0)S.idx[i]=row;else S.idx.push(row);
+    S.idx.sort((a,b)=>a.d<b.d?1:-1);
+    await sSet(K.idx,S.idx);
+  }
+  renderCal();renderRecent();
+}
+
+/* ── add blocks ── */
+function doAddText(p){
+  S.cur.blocks.splice(p,0,{type:'text',text:''});
+  S.focus=p;touch();renderBlocks();
+  const ta=document.querySelector('.blk[data-i="'+p+'"] textarea');
+  if(ta)ta.focus();
+}
+let photoPos=0,chatPos=0;
+function doAddPhoto(p){photoPos=p;$('#fileP').value='';$('#fileP').click()}
+function doAddChat(p){chatPos=p;openChatModal()}
+$('#addText').onclick=()=>doAddText(insertPos());
+$('#addPhoto').onclick=()=>doAddPhoto(insertPos());
+$('#fileP').addEventListener('change',async e=>{
+  const files=[...e.target.files];if(!files.length)return;
+  toast('사진 처리 중…');
+  let p=photoPos;
+  for(const f of files){
+    try{
+      const data=await compress(f);
+      if(!data){toast('사진이 너무 커요: '+f.name);continue}
+      const id='p'+Date.now()+Math.random().toString(36).slice(2,7);
+      PC[id]=data;
+      await sSet(K.p(id),data);
+      S.cur.blocks.splice(p,0,{type:'photo',id:id,cap:''});
+      S.focus=p;p++;
+    }catch(err){toast('사진 추가 실패')}
+  }
+  touch();renderBlocks();
+});
+function readFile(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(f)})}
+function loadImg(src){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src})}
+async function compress(file){
+  const src=await readFile(file);
+  const img=await loadImg(src);
+  let q=0.72,max=1280;
+  for(let t=0;t<4;t++){
+    const sc=Math.min(1,max/Math.max(img.width,img.height));
+    const c=document.createElement('canvas');
+    c.width=Math.max(1,Math.round(img.width*sc));
+    c.height=Math.max(1,Math.round(img.height*sc));
+    c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+    const out=c.toDataURL('image/jpeg',q);
+    if(out.length<3500000)return out;
+    max*=0.75;q=Math.max(0.4,q-0.12);
+  }
+  return null;
+}
+
+/* ── kakao chat ── */
+$('#addChat').onclick=()=>doAddChat(insertPos());
+function openChatModal(){
+  modal(
+    '<div class="mTitle">카톡 대화 불러오기</div>'
+    +'<div class="fh" style="margin-bottom:10px">카톡 대화방 → 메뉴(≡) → 대화 내용 내보내기(텍스트만) → 파일을 열어 전체 복사 후 아래에 붙여넣으세요.</div>'
+    +'<textarea id="chatRaw" style="min-height:150px" placeholder="여기에 붙여넣기…"></textarea>'
+    +'<div class="chkRow"><input type="checkbox" id="chatOnlyDate" checked><label for="chatOnlyDate">이 일기 날짜('+fmtDate(S.cur.date)+')의 메시지만 가져오기</label></div>'
+    +'<div class="frow" style="margin:12px 0 0"><div class="fl">내 카톡 대화명 (내 말풍선 구분용)</div><input type="text" id="chatMe" placeholder="예: 수정" value="'+esc(S.set.myName||'')+'"></div>'
+    +'<div class="mrowBtn"><button class="btn" id="chatCancel">취소</button><button class="btn pri" id="chatOk">추가</button></div>'
+  );
+  $('#chatCancel').onclick=closeModal;
+  $('#chatOk').onclick=()=>{
+    const raw=$('#chatRaw').value;
+    const only=$('#chatOnlyDate').checked;
+    let msgs=parseKakao(raw);
+    if(only)msgs=msgs.filter(m=>!m.date||m.date===S.cur.date);
+    if(!msgs.length){toast('불러올 메시지를 찾지 못했어요');return}
+    if(msgs.length>1500){msgs=msgs.slice(0,1500);toast('메시지가 많아 1500개까지만 가져왔어요')}
+    const me=$('#chatMe').value.trim();
+    if(me!==S.set.myName){S.set.myName=me;sSet(K.set,S.set);renderHeader()}
+    const list=msgs.map(m=>({n:m.name,t:m.time,x:m.text,me:!!me&&m.name.trim()===me}));
+    const p=chatPos;
+    S.cur.blocks.splice(p,0,{type:'chat',msgs:list,open:false});
+    S.focus=p;touch();renderBlocks();closeModal();
+    toast(list.length+'개 메시지를 가져왔어요');
+  };
+}
+function parseKakao(raw){
+  const msgs=[];let curDate=null;
+  const reHdr=/(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일/;
+  const reA=/^(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\.?\s*(오전|오후)?\s*(\d{1,2}):(\d{2}),\s*(.+?)\s*:\s*([\s\S]*)$/;
+  const reB=/^\[([^\]]+)\]\s*\[(오전|오후)?\s*(\d{1,2}):(\d{2})\]\s*([\s\S]*)$/;
+  const reC=/^"?(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2}):\d{2}"?\s*,\s*"?([^",]+)"?\s*,\s*"?([\s\S]*?)"?$/;
+  const t12=(ap,h,mm)=>(ap?ap+' ':'')+h+':'+mm;
+  for(const line of raw.split(/\r?\n/)){
+    let m;
+    if((m=line.match(reA))){
+      curDate=m[1]+'-'+pad(+m[2])+'-'+pad(+m[3]);
+      msgs.push({date:curDate,time:t12(m[4],m[5],m[6]),name:m[7].trim(),text:m[8]});
+    }else if((m=line.match(reC))){
+      curDate=m[1]+'-'+m[2]+'-'+m[3];
+      msgs.push({date:curDate,time:m[4]+':'+m[5],name:m[6].trim(),text:m[7]});
+    }else if((m=line.match(reB))){
+      msgs.push({date:curDate,time:t12(m[2],m[3],m[4]),name:m[1].trim(),text:m[5]});
+    }else if((m=line.match(reHdr))){
+      curDate=m[1]+'-'+pad(+m[2])+'-'+pad(+m[3]);
+    }else if(line.trim()&&msgs.length){
+      msgs[msgs.length-1].text+='\n'+line;
+    }
+  }
+  return msgs.filter(m=>m.text&&m.text.trim());
+}
+
+/* ── quick capture ── */
+const QP={h:[],e:[]};
+let qTarget='h';
+function qPick(pfx){qTarget=pfx;$('#fileQ').value='';$('#fileQ').click()}
+$('#fileQ').addEventListener('change',async e=>{
+  const files=[...e.target.files];if(!files.length)return;
+  toast('사진 처리 중…');
+  for(const f of files){
+    try{
+      const src=await compress(f);
+      if(!src){toast('사진이 너무 커요: '+f.name);continue}
+      QP[qTarget].push({id:'p'+Date.now()+Math.random().toString(36).slice(2,7),src:src});
+    }catch(err){toast('사진 추가 실패')}
+  }
+  renderQThumbs(qTarget);
+});
+function renderQThumbs(pfx){
+  const el=$('#'+pfx+'Qthumbs');
+  el.innerHTML=QP[pfx].map((s,i)=>'<div class="qth"><img src="'+s.src+'" alt=""><button data-qx="'+pfx+':'+i+'">✕</button></div>').join('');
+  el.classList.toggle('hide',!QP[pfx].length);
+}
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-qx]');if(!b)return;
+  const a=b.dataset.qx.split(':');
+  QP[a[0]].splice(+a[1],1);renderQThumbs(a[0]);
+});
+async function qSubmit(pfx){
+  const ta=$('#'+pfx+'Qtx');
+  const tx=ta.value.trim();
+  const shots=QP[pfx].slice();
+  if(!tx&&!shots.length){toast('메모나 사진을 넣어주세요');return}
+  const dateStr=(pfx==='e'&&S.cur)?S.cur.date:ymd(new Date());
+  const ts=Date.now();
+  S.dirty=false;clearTimeout(saveTimer);
+  let en=(S.cur&&S.cur.date===dateStr)?S.cur:await sGet(K.e(dateStr));
+  if(!en)en={date:dateStr,createdAt:ts,updatedAt:ts,blocks:[]};
+  if(!Array.isArray(en.blocks))en.blocks=[];
+  if(en.blocks.length===1&&en.blocks[0].type==='text'&&!en.blocks[0].text.trim())en.blocks=[];
+  for(const s of shots){PC[s.id]=s.src;await sSet(K.p(s.id),s.src);en.blocks.push({type:'photo',id:s.id,cap:'',ts:ts})}
+  if(tx)en.blocks.push({type:'text',text:tx,ts:ts});
+  en.updatedAt=ts;
+  await sSet(K.e(dateStr),en);
+  await updateIndex(en);
+  if(S.cur&&S.cur.date===dateStr){S.cur=en;renderEntry()}
+  QP[pfx]=[];ta.value='';grow(ta);renderQThumbs(pfx);
+  const dn=dday(dateStr);
+  toast((dn&&dn>0?'D+'+dn+' · ':'')+fmtTime(ts)+' 기록됐어요 ✦');
+}
+$('#hQph').onclick=()=>qPick('h');
+$('#eQph').onclick=()=>qPick('e');
+$('#hQgo').onclick=()=>qSubmit('h');
+$('#eQgo').onclick=()=>qSubmit('e');
+$('#hQtx').addEventListener('input',e=>grow(e.target));
+$('#eQtx').addEventListener('input',e=>grow(e.target));
+
+/* ── settings ── */
+function openSettings(first){
+  show('set');
+  $('#inStart').value=S.set.startDate||'2026-04-05';
+  $('#inMe').value=S.set.myName||'';
+  $('#inYou').value=S.set.partnerName||'';
+  if(first)toast('처음 만난 날을 먼저 설정해 주세요 ✦');
+}
+$('#sBack').onclick=()=>{show('cal');renderCal();renderRecent()};
+$('#sSave').onclick=async()=>{
+  const sd=$('#inStart').value;
+  if(!sd){toast('처음 만난 날을 선택해 주세요');return}
+  S.set.startDate=sd;
+  S.set.myName=$('#inMe').value.trim();
+  S.set.partnerName=$('#inYou').value.trim();
+  await sSet(K.set,S.set);
+  renderHeader();renderCal();renderRecent();
+  toast('설정 저장 완료 ✦ 오늘은 '+ddayLabel(dday(ymd(new Date()))));
+  show('cal');
+};
+
+/* ── backup ── */
+$('#btnExport').onclick=async()=>{
+  try{
+    toast('백업 생성 중…');
+    const out={app:'synk-archive',v:1,at:new Date().toISOString(),settings:S.set,index:S.idx,entries:{},photos:{}};
+    for(const o of S.idx){
+      const e=await sGet(K.e(o.d));
+      if(!e)continue;
+      out.entries[o.d]=e;
+      for(const b of e.blocks)if(b.type==='photo'&&!(b.id in out.photos)){
+        out.photos[b.id]=PC[b.id]||await sGet(K.p(b.id));
+      }
+    }
+    const blob=new Blob([JSON.stringify(out)],{type:'application/json'});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download='synk-archive-'+ymd(new Date())+'.json';
+    document.body.appendChild(a);a.click();
+    setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);
+    toast('백업 파일을 내려받았어요 ✦');
+  }catch(e){toast('백업 생성 실패')}
+};
+$('#btnImport').onclick=()=>{$('#fileI').value='';$('#fileI').click()};
+$('#fileI').addEventListener('change',async e=>{
+  const f=e.target.files[0];if(!f)return;
+  try{
+    const data=JSON.parse(await f.text());
+    if(data.app!=='synk-archive')throw 0;
+    confirmM('백업의 기록 '+Object.keys(data.entries||{}).length+'개를 불러올까요? 같은 날짜는 백업 내용으로 대체돼요.',async()=>{
+      toast('복원 중…');
+      for(const id in (data.photos||{})){
+        if(data.photos[id]){PC[id]=data.photos[id];await sSet(K.p(id),data.photos[id])}
+      }
+      for(const d in (data.entries||{})){
+        await sSet(K.e(d),data.entries[d]);
+        const i=S.idx.findIndex(o=>o.d===d);
+        const src=(data.index||[]).find(o=>o.d===d)||{d:d,s:snippet(data.entries[d]),p:0,c:0};
+        if(i>=0)S.idx[i]=src;else S.idx.push(src);
+      }
+      S.idx.sort((a,b)=>a.d<b.d?1:-1);
+      await sSet(K.idx,S.idx);
+      if(!S.set.startDate&&data.settings&&data.settings.startDate){S.set=data.settings;await sSet(K.set,S.set)}
+      renderHeader();renderCal();renderRecent();show('cal');
+      toast('복원 완료 ✦');
+    });
+  }catch(err){toast('백업 파일을 읽을 수 없어요')}
+});
+
+/* ── init ── */
+(async function init(){
+  let first=false;
+  try{
+    const st=await sGet(K.set);
+    if(st&&typeof st==='object')S.set=Object.assign(S.set,st);
+    else first=true;
+    if(!S.set.startDate){S.set.startDate='2026-04-05';await sSet(K.set,S.set)}
+    const ix=await sGet(K.idx);
+    if(Array.isArray(ix))S.idx=ix;
+  }catch(e){}
+  $('#loader').classList.add('hide');
+  renderHeader();renderCal();renderRecent();
+  show('cal');
+  if(first)toast('오늘 D+100 ✦ 200일은 10월 21일이에요');
+})();
+</script>
+</body>
+</html>
