@@ -151,8 +151,8 @@ figure.ph figcaption{font-size:12px;color:var(--tx2);padding:9px 12px}
 .vcap{font-size:12px;color:var(--tx2);padding:8px 2px 0}
 
 /* moment footer & divider */
-.tfoot{display:flex;justify-content:flex-end;margin:-4px 2px 0}
-.mdiv{border:0;height:1px;background:linear-gradient(90deg,transparent,var(--line2),transparent);margin:6px 0 20px}
+.thead{margin:0 0 2px}
+.mdiv{border:0;height:1px;background:linear-gradient(90deg,transparent,var(--line2),transparent);margin:8px 0 16px}
 
 /* photo slider */
 .slider{position:relative;background:#0a0b0d;border:1px solid var(--line);border-radius:14px;overflow:hidden}
@@ -190,6 +190,7 @@ figure.ph figcaption{font-size:12px;color:var(--tx2);padding:9px 12px}
 .bVol::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:linear-gradient(180deg,#eef0f4,#b9bec8);border:1px solid #dfe2e8;cursor:pointer}
 .bgmEdit{margin-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .bgmEdit .bT{font-size:12px;color:var(--tx2);flex:none;max-width:55%}
+.bgmCapV{font-size:12px;color:var(--tx2);padding:8px 2px 0}
 
 /* chat */
 .chatbox{background:var(--ink2);border:1px solid var(--line);border-radius:14px;padding:12px}
@@ -716,7 +717,7 @@ function renderView(e){
   groups.forEach(gr=>{
     const inner=renderGroupItems(gr.items);
     if(!inner)return;
-    parts.push(inner+(gr.t?'<div class="tfoot"><span class="tchip lat">'+gr.t+'</span></div>':''));
+    parts.push((gr.t?'<div class="thead"><span class="tchip lat">'+gr.t+'</span></div>':'')+inner);
   });
   return parts.join('<hr class="mdiv">');
 }
@@ -910,15 +911,18 @@ $('#blocks').addEventListener('focusin',e=>{
   if(b&&b.dataset.i!=null){S.focus=+b.dataset.i;markFocus()}
 });
 $('#blocks').addEventListener('click',e=>{
-  if(e.target.tagName==='IMG'){
-    const sd=e.target.closest('.slide');
-    if(sd){
-      const imgs=[...sd.parentElement.querySelectorAll('.slide img')];
-      openLightbox(imgs.map(x=>x.src),imgs.indexOf(e.target));
-      return;
+  const slEl=e.target.closest('.slider');
+  if(slEl&&!e.target.closest('.sarr')){
+    const strip=slEl.querySelector('.strip');
+    const imgs=[...strip.querySelectorAll('.slide img')];
+    if(imgs.length){
+      let idx=Math.min(imgs.length-1,Math.max(0,Math.round(strip.scrollLeft/strip.clientWidth)));
+      if(e.target.tagName==='IMG'){const k=imgs.indexOf(e.target);if(k>=0)idx=k}
+      openLightbox(imgs.map(x=>x.src),idx);
     }
-    if(e.target.closest('figure.ph')){openLightbox([e.target.src],0);return}
+    return;
   }
+  if(e.target.tagName==='IMG'&&e.target.closest('figure.ph')){openLightbox([e.target.src],0);return}
   const ab=e.target.closest('[data-add]');
   if(ab){
     const p=S.cur.blocks.length;
@@ -1280,7 +1284,7 @@ function setupBgm(){
 function renderBgm(){
   const box=$('#bgmBox'),e=S.cur;
   if(!e){box.innerHTML='';box.dataset.k='';return}
-  const key=S.mode+':'+(e.bgm?e.bgm.kind+':'+(e.bgm.vid||e.bgm.id):'none');
+  const key=S.mode+':'+(e.bgm?e.bgm.kind+':'+(e.bgm.vid||e.bgm.id)+':'+(e.bgm.cap||''):'none');
   if(box.dataset.k===key){if(S.mode==='view')setupBgm();return}
   box.dataset.k=key;
   if(S.mode==='edit'){
@@ -1303,14 +1307,16 @@ function renderBgm(){
     stopBgm();bgmKey=e.date+':'+e.bgm.vid;
     box.innerHTML='<div class="bgmCard"><iframe src="https://www.youtube-nocookie.com/embed/'+e.bgm.vid
       +'?autoplay=1&loop=1&playlist='+e.bgm.vid+'&rel=0&playsinline=1" '
-      +'allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>';
+      +'allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>'
+      +(e.bgm.cap?'<div class="bgmCapV">'+esc(e.bgm.cap)+'</div>':'');
     return;
   }
   box.innerHTML='<div class="bgmBar">'
     +'<button class="bBtn" id="bgmPlay">▶</button>'
     +'<div class="bMeta"><div class="bT">'+esc(e.bgm.name||'BGM')+'</div><div class="bS lat">BGM · Loop</div></div>'
     +'<input type="range" id="bgmVol" min="0" max="1" step="0.05" value="'+bgmVolPref+'" class="bVol">'
-    +'</div>';
+    +'</div>'
+    +(e.bgm.cap?'<div class="bgmCapV">'+esc(e.bgm.cap)+'</div>':'');
   $('#bgmPlay').onclick=()=>{
     if(!bgmAudio){bgmKey=null;setupBgm();return}
     if(bgmAudio.paused)bgmAudio.play().catch(()=>{});else bgmAudio.pause();
@@ -1340,21 +1346,34 @@ async function uploadAudio(id,ext,file){
   }catch(e){return false}
 }
 function openBgmModal(){
+  const cur=S.cur.bgm||{};
+  const preUrl=cur.kind==='yt'?('https://youtu.be/'+cur.vid):'';
   modal(
     '<div class="mTitle">배경음악 (BGM)</div>'
-    +'<div class="frow"><div class="fl">유튜브 링크</div><input type="text" id="bgmUrl" placeholder="https://youtu.be/…"><div class="fh">작은 플레이어로 자동재생을 시도해요. 광고는 영상에 따라 나올 수 있어요 (유튜브 프리미엄에 로그인된 브라우저에선 광고 없음).</div></div>'
+    +'<div class="frow" style="margin-bottom:12px"><div class="fl">메모 / 캡션 (선택)</div><input type="text" id="bgmCap" placeholder="예: 이날 카페에서 나온 노래" value="'+esc(cur.cap||'')+'"></div>'
+    +'<div class="frow"><div class="fl">유튜브 링크</div><input type="text" id="bgmUrl" placeholder="https://youtu.be/…" value="'+esc(preUrl)+'"><div class="fh">작은 플레이어로 자동재생을 시도해요. 광고는 영상에 따라 나올 수 있어요 (유튜브 프리미엄에 로그인된 브라우저에선 광고 없음).</div></div>'
     +'<div class="fh" style="text-align:center;margin:4px 0 12px">— 또는 —</div>'
     +'<button class="btn" id="bgmFile" style="width:100%">🎵 내 음악 파일 업로드 (mp3·m4a·wav·flac)</button>'
     +'<div class="fh" style="margin-top:8px">내 파일은 원본 그대로 저장돼 광고 없이 고음질로 자동재생·반복돼요. 50MB 이하.</div>'
-    +'<div class="mrowBtn"><button class="btn" id="bgmCancel">취소</button><button class="btn pri" id="bgmYtOk">유튜브 적용</button></div>'
+    +'<div class="mrowBtn"><button class="btn" id="bgmCancel">취소</button>'
+    +(S.cur.bgm?'<button class="btn" id="bgmCapOnly">메모만 저장</button>':'')
+    +'<button class="btn pri" id="bgmYtOk">유튜브 적용</button></div>'
   );
   $('#bgmCancel').onclick=closeModal;
   $('#bgmFile').onclick=()=>{$('#fileB').value='';$('#fileB').click()};
+  const capOnly=$('#bgmCapOnly');
+  if(capOnly)capOnly.onclick=()=>{
+    S.cur.bgm.cap=$('#bgmCap').value.trim();
+    touch();closeModal();
+    $('#bgmBox').dataset.k='';renderBgm();
+    toast('메모 저장 완료');
+  };
   $('#bgmYtOk').onclick=()=>{
     const vid=ytId($('#bgmUrl').value);
     if(!vid){toast('유튜브 링크를 확인해 주세요');return}
-    if(S.cur.bgm&&S.cur.bgm.kind==='file'){delete PC[S.cur.bgm.id];removeMediaNames([S.cur.bgm.id+'.'+(S.cur.bgm.ext||'mp3')])}
-    S.cur.bgm={kind:'yt',vid:vid};
+    const cap=$('#bgmCap').value.trim();
+    if(S.cur.bgm&&S.cur.bgm.kind==='file'&&S.cur.bgm.id){delete PC[S.cur.bgm.id];removeMediaNames([S.cur.bgm.id+'.'+(S.cur.bgm.ext||'mp3')])}
+    S.cur.bgm={kind:'yt',vid:vid,cap:cap};
     stopBgm();bgmKey=null;
     touch();closeModal();
     $('#bgmBox').dataset.k='';renderBgm();
@@ -1364,6 +1383,7 @@ function openBgmModal(){
 $('#fileB').addEventListener('change',async e=>{
   const f=e.target.files[0];if(!f)return;
   if(f.size>52428800){toast('음악 파일은 50MB 이하만 올릴 수 있어요');return}
+  const capEl=$('#bgmCap');const cap=capEl?capEl.value.trim():'';
   const ext=audExt(f.type,f.name);
   toast('음악 업로드 중…');
   const id='a'+Date.now()+Math.random().toString(36).slice(2,7);
@@ -1371,7 +1391,7 @@ $('#fileB').addEventListener('change',async e=>{
   if(!ok){toast('업로드 실패 — 네트워크 확인');return}
   if(S.cur.bgm&&S.cur.bgm.kind==='file'){delete PC[S.cur.bgm.id];removeMediaNames([S.cur.bgm.id+'.'+(S.cur.bgm.ext||'mp3')])}
   PC[id]=URL.createObjectURL(f);
-  S.cur.bgm={kind:'file',id:id,ext:ext,name:f.name};
+  S.cur.bgm={kind:'file',id:id,ext:ext,name:f.name,cap:cap};
   stopBgm();bgmKey=null;
   touch();closeModal();
   $('#bgmBox').dataset.k='';renderBgm();
