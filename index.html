@@ -178,6 +178,19 @@ figure.ph figcaption{font-size:12px;color:var(--tx2);padding:9px 12px}
 .lbCtl{display:flex;justify-content:center;align-items:center;gap:10px;padding:12px 0 calc(16px + env(safe-area-inset-bottom))}
 .lbZoom{font-size:11px;color:var(--tx2);min-width:46px;text-align:center;letter-spacing:.06em}
 
+/* bgm */
+.bgmCard{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#000;margin-top:14px}
+.bgmCard iframe{width:100%;height:200px;border:0;display:block}
+.bgmBar{display:flex;align-items:center;gap:10px;margin-top:14px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:9px 12px}
+.bgmBar .bBtn{appearance:none;width:34px;height:34px;border-radius:50%;border:1px solid #e2e5eb;background:linear-gradient(180deg,#eef0f4,#b9bec8);color:#111318;font-size:12px;cursor:pointer;flex:none;font-family:inherit;padding:0}
+.bMeta{flex:1;min-width:0}
+.bT{font-size:12.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bS{font-size:9px;color:var(--tx3);letter-spacing:.18em;margin-top:1px}
+.bVol{width:64px;-webkit-appearance:none;appearance:none;height:3px;border-radius:2px;background:var(--line2);outline:none;border:0;padding:0}
+.bVol::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:linear-gradient(180deg,#eef0f4,#b9bec8);border:1px solid #dfe2e8;cursor:pointer}
+.bgmEdit{margin-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.bgmEdit .bT{font-size:12px;color:var(--tx2);flex:none;max-width:55%}
+
 /* chat */
 .chatbox{background:var(--ink2);border:1px solid var(--line);border-radius:14px;padding:12px}
 .chatHd{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
@@ -302,6 +315,7 @@ figure.ph figcaption{font-size:12px;color:var(--tx2);padding:9px 12px}
       <div class="eSub" id="eSub">—</div>
       <div><span class="dpill" id="eDday">D+—</span></div>
       <div id="eTitleBox"></div>
+      <div id="bgmBox"></div>
     </div>
     <hr class="hair" style="margin-bottom:16px">
     <div id="blocks"></div>
@@ -336,7 +350,7 @@ figure.ph figcaption{font-size:12px;color:var(--tx2);padding:9px 12px}
         <button class="btn" id="btnExport">⬇ 전체 백업 내려받기 (사진 포함 JSON)</button>
         <button class="btn ghost" id="btnImport">⬆ 백업 파일 불러오기</button>
       </div>
-      <div class="fh" style="margin-top:10px">기록은 Supabase에 자동 저장돼요. 그래도 가끔 백업 파일을 내려받아 두면 어떤 경우에도 소실되지 않아요. 영상은 용량 문제로 백업 파일에는 포함되지 않고 서버에만 보관돼요.</div>
+      <div class="fh" style="margin-top:10px">기록은 Supabase에 자동 저장돼요. 그래도 가끔 백업 파일을 내려받아 두면 어떤 경우에도 소실되지 않아요. 영상·음악 파일은 용량 문제로 백업 파일에는 포함되지 않고 서버에만 보관돼요.</div>
     </div>
     <div class="card">
       <div class="label lat">Account</div>
@@ -385,6 +399,7 @@ figure.ph figcaption{font-size:12px;color:var(--tx2);padding:9px 12px}
 <div id="toast"></div>
 <input type="file" id="fileP" accept="image/*,video/*" multiple hidden>
 <input type="file" id="fileQ" accept="image/*,video/*" multiple hidden>
+<input type="file" id="fileB" accept="audio/*" hidden>
 <input type="file" id="fileI" accept="application/json,.json" hidden>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -464,6 +479,7 @@ async function loadEntry(d){
     date:r.data.entry_date,
     title:r.data.title||'',
     blocks:Array.isArray(r.data.blocks)?r.data.blocks:[],
+    bgm:r.data.bgm||null,
     createdAt:new Date(r.data.created_at).getTime(),
     updatedAt:new Date(r.data.updated_at).getTime()
   };
@@ -479,6 +495,7 @@ async function saveEntry(e,withCreated){
       snippet:snippet(e),
       photo_count:e.blocks.filter(b=>b.type==='photo'||b.type==='video').length,
       chat_count:e.blocks.filter(b=>b.type==='chat').length,
+      bgm:e.bgm||null,
       updated_at:new Date(e.updatedAt||Date.now()).toISOString()
     };
     if(withCreated&&e.createdAt)payload.created_at=new Date(e.createdAt).toISOString();
@@ -593,14 +610,19 @@ $('#goSet').onclick=()=>openSettings();
 /* ── entry ── */
 async function openEntry(ds){
   await flushSave();
+  stopBgm();bgmKey=null;
+  const bb=$('#bgmBox');if(bb)bb.dataset.k='';
   show('entry');
   $('#blocks').innerHTML='<div class="loading">불러오는 중…</div>';
   let e=await loadEntry(ds);
   let isNew=false;
-  if(!e){isNew=true;e={date:ds,title:'',createdAt:Date.now(),updatedAt:Date.now(),blocks:[{type:'text',text:'',ts:Date.now()}]}}
+  if(!e){isNew=true;e={date:ds,title:'',bgm:null,createdAt:Date.now(),updatedAt:Date.now(),blocks:[{type:'text',text:'',ts:Date.now()}]}}
   S.cur=e;S.mode=isNew?'edit':'view';S.focus=-1;S.dirty=false;
   const meds=e.blocks.filter(b=>(b.type==='photo'||b.type==='video')&&!(b.id in PC));
   await Promise.all(meds.map(async b=>{PC[b.id]=await signName(mediaName(b))}));
+  if(e.bgm&&e.bgm.kind==='file'&&!(e.bgm.id in PC)){
+    PC[e.bgm.id]=await signName(e.bgm.id+'.'+(e.bgm.ext||'mp3'));
+  }
   renderEntry();
 }
 function renderEntry(){
@@ -619,6 +641,7 @@ function renderEntry(){
   }else{
     tb.innerHTML=(e.title&&e.title.trim())?'<div class="eTitleV">'+esc(e.title)+'</div>':'';
   }
+  renderBgm();
   renderBlocks();
 }
 function toolsHtml(i,n){
@@ -939,14 +962,17 @@ $('#eMode').onclick=async()=>{
   if(S.mode==='view'){S.mode='edit';renderEntry()}
   else{await flushSave(true);S.mode='view';renderEntry()}
 };
-$('#eBack').onclick=async()=>{await flushSave();S.cur=null;show('cal');renderCal();renderRecent()};
+$('#eBack').onclick=async()=>{await flushSave();stopBgm();bgmKey=null;S.cur=null;show('cal');renderCal();renderRecent()};
 $('#eDel').onclick=()=>{
   const e=S.cur;if(!e)return;
   confirmM(fmtDate(e.date)+' 일기를 완전히 삭제할까요?',async()=>{
     S.dirty=false;clearTimeout(saveTimer);
     const meds=e.blocks.filter(b=>b.type==='photo'||b.type==='video');
     meds.forEach(b=>delete PC[b.id]);
-    await removeMediaNames(meds.map(mediaName));
+    const names=meds.map(mediaName);
+    if(e.bgm&&e.bgm.kind==='file'){delete PC[e.bgm.id];names.push(e.bgm.id+'.'+(e.bgm.ext||'mp3'))}
+    await removeMediaNames(names);
+    stopBgm();bgmKey=null;
     await deleteEntryRow(e.date);
     S.idx=S.idx.filter(o=>o.d!==e.date);
     S.cur=null;show('cal');renderCal();renderRecent();toast('삭제됐어요');
@@ -984,7 +1010,7 @@ function snippet(e){
   if(e.blocks.some(b=>b.type==='chat'))return '대화 기록';
   return '';
 }
-function isEmpty(e){return !(e.title&&e.title.trim())&&e.blocks.every(b=>b.type==='text'&&!b.text.trim())}
+function isEmpty(e){return !e.bgm&&!(e.title&&e.title.trim())&&e.blocks.every(b=>b.type==='text'&&!b.text.trim())}
 function updateIndexLocal(e){
   const i=S.idx.findIndex(o=>o.d===e.date);
   if(isEmpty(e)){
@@ -1232,6 +1258,126 @@ document.addEventListener('paste',async e=>{
   toast(imgs.length+'장 붙여넣음 · 기록을 눌러 저장');
 });
 
+/* ── BGM ── */
+let bgmAudio=null,bgmKey=null,bgmVolPref=0.7;
+function stopBgm(){if(bgmAudio){try{bgmAudio.pause()}catch(e){}bgmAudio=null}updBgmBtn()}
+function updBgmBtn(){const b=$('#bgmPlay');if(b)b.textContent=(bgmAudio&&!bgmAudio.paused)?'❚❚':'▶'}
+function setupBgm(){
+  const e=S.cur;
+  const key=e&&e.bgm?e.date+':'+(e.bgm.vid||e.bgm.id):null;
+  if(key===bgmKey){updBgmBtn();return}
+  stopBgm();bgmKey=key;
+  if(!key||e.bgm.kind!=='file')return;
+  const src=PC[e.bgm.id];
+  if(!src)return;
+  bgmAudio=new Audio(src);
+  bgmAudio.loop=true;
+  bgmAudio.volume=bgmVolPref;
+  bgmAudio.onplay=updBgmBtn;
+  bgmAudio.onpause=updBgmBtn;
+  bgmAudio.play().then(updBgmBtn).catch(()=>{updBgmBtn();toast('▶ 를 누르면 BGM이 재생돼요')});
+}
+function renderBgm(){
+  const box=$('#bgmBox'),e=S.cur;
+  if(!e){box.innerHTML='';box.dataset.k='';return}
+  const key=S.mode+':'+(e.bgm?e.bgm.kind+':'+(e.bgm.vid||e.bgm.id):'none');
+  if(box.dataset.k===key){if(S.mode==='view')setupBgm();return}
+  box.dataset.k=key;
+  if(S.mode==='edit'){
+    const cur=e.bgm?(e.bgm.kind==='yt'?'🎵 YouTube BGM':'🎵 '+esc(e.bgm.name||'음악 파일')):null;
+    box.innerHTML='<div class="bgmEdit">'+(cur
+      ?'<span class="bT">'+cur+'</span><button class="btn sm ghost" id="bgmChg">변경</button><button class="btn sm ghost" id="bgmDel">제거</button>'
+      :'<button class="btn sm" id="bgmAdd">🎵 BGM 추가</button>')+'</div>';
+    const add=$('#bgmAdd'),chg=$('#bgmChg'),del=$('#bgmDel');
+    if(add)add.onclick=openBgmModal;
+    if(chg)chg.onclick=openBgmModal;
+    if(del)del.onclick=()=>{
+      if(e.bgm&&e.bgm.kind==='file'){delete PC[e.bgm.id];removeMediaNames([e.bgm.id+'.'+(e.bgm.ext||'mp3')])}
+      stopBgm();bgmKey=null;
+      S.cur.bgm=null;touch();box.dataset.k='';renderBgm();
+    };
+    return;
+  }
+  if(!e.bgm){box.innerHTML='';stopBgm();bgmKey=null;return}
+  if(e.bgm.kind==='yt'){
+    stopBgm();bgmKey=e.date+':'+e.bgm.vid;
+    box.innerHTML='<div class="bgmCard"><iframe src="https://www.youtube-nocookie.com/embed/'+e.bgm.vid
+      +'?autoplay=1&loop=1&playlist='+e.bgm.vid+'&rel=0&playsinline=1" '
+      +'allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>';
+    return;
+  }
+  box.innerHTML='<div class="bgmBar">'
+    +'<button class="bBtn" id="bgmPlay">▶</button>'
+    +'<div class="bMeta"><div class="bT">'+esc(e.bgm.name||'BGM')+'</div><div class="bS lat">BGM · Loop</div></div>'
+    +'<input type="range" id="bgmVol" min="0" max="1" step="0.05" value="'+bgmVolPref+'" class="bVol">'
+    +'</div>';
+  $('#bgmPlay').onclick=()=>{
+    if(!bgmAudio){bgmKey=null;setupBgm();return}
+    if(bgmAudio.paused)bgmAudio.play().catch(()=>{});else bgmAudio.pause();
+  };
+  $('#bgmVol').oninput=ev=>{bgmVolPref=+ev.target.value;if(bgmAudio)bgmAudio.volume=bgmVolPref};
+  setupBgm();
+}
+function ytId(u){
+  const m=String(u||'').match(/(?:youtu\.be\/|[?&]v=|shorts\/|embed\/)([A-Za-z0-9_-]{11})/);
+  return m?m[1]:null;
+}
+function audExt(t,name){
+  t=t||'';
+  if(t.indexOf('mpeg')>=0)return 'mp3';
+  if(t.indexOf('wav')>=0)return 'wav';
+  if(t.indexOf('flac')>=0)return 'flac';
+  if(t.indexOf('ogg')>=0)return 'ogg';
+  if(t.indexOf('aac')>=0||t.indexOf('mp4')>=0||t.indexOf('m4a')>=0)return 'm4a';
+  const m=(name||'').match(/\.(mp3|m4a|wav|flac|ogg|aac)$/i);
+  return m?m[1].toLowerCase():'mp3';
+}
+async function uploadAudio(id,ext,file){
+  try{
+    const r=await sb.storage.from('diary-photos')
+      .upload(UID+'/'+id+'.'+ext,file,{contentType:file.type||'audio/mpeg',upsert:true});
+    return !r.error;
+  }catch(e){return false}
+}
+function openBgmModal(){
+  modal(
+    '<div class="mTitle">배경음악 (BGM)</div>'
+    +'<div class="frow"><div class="fl">유튜브 링크</div><input type="text" id="bgmUrl" placeholder="https://youtu.be/…"><div class="fh">작은 플레이어로 자동재생을 시도해요. 광고는 영상에 따라 나올 수 있어요 (유튜브 프리미엄에 로그인된 브라우저에선 광고 없음).</div></div>'
+    +'<div class="fh" style="text-align:center;margin:4px 0 12px">— 또는 —</div>'
+    +'<button class="btn" id="bgmFile" style="width:100%">🎵 내 음악 파일 업로드 (mp3·m4a·wav·flac)</button>'
+    +'<div class="fh" style="margin-top:8px">내 파일은 원본 그대로 저장돼 광고 없이 고음질로 자동재생·반복돼요. 50MB 이하.</div>'
+    +'<div class="mrowBtn"><button class="btn" id="bgmCancel">취소</button><button class="btn pri" id="bgmYtOk">유튜브 적용</button></div>'
+  );
+  $('#bgmCancel').onclick=closeModal;
+  $('#bgmFile').onclick=()=>{$('#fileB').value='';$('#fileB').click()};
+  $('#bgmYtOk').onclick=()=>{
+    const vid=ytId($('#bgmUrl').value);
+    if(!vid){toast('유튜브 링크를 확인해 주세요');return}
+    if(S.cur.bgm&&S.cur.bgm.kind==='file'){delete PC[S.cur.bgm.id];removeMediaNames([S.cur.bgm.id+'.'+(S.cur.bgm.ext||'mp3')])}
+    S.cur.bgm={kind:'yt',vid:vid};
+    stopBgm();bgmKey=null;
+    touch();closeModal();
+    $('#bgmBox').dataset.k='';renderBgm();
+    toast('유튜브 BGM 설정 완료 🎵');
+  };
+}
+$('#fileB').addEventListener('change',async e=>{
+  const f=e.target.files[0];if(!f)return;
+  if(f.size>52428800){toast('음악 파일은 50MB 이하만 올릴 수 있어요');return}
+  const ext=audExt(f.type,f.name);
+  toast('음악 업로드 중…');
+  const id='a'+Date.now()+Math.random().toString(36).slice(2,7);
+  const ok=await uploadAudio(id,ext,f);
+  if(!ok){toast('업로드 실패 — 네트워크 확인');return}
+  if(S.cur.bgm&&S.cur.bgm.kind==='file'){delete PC[S.cur.bgm.id];removeMediaNames([S.cur.bgm.id+'.'+(S.cur.bgm.ext||'mp3')])}
+  PC[id]=URL.createObjectURL(f);
+  S.cur.bgm={kind:'file',id:id,ext:ext,name:f.name};
+  stopBgm();bgmKey=null;
+  touch();closeModal();
+  $('#bgmBox').dataset.k='';renderBgm();
+  toast('BGM 설정 완료 🎵 보기 화면에서 자동재생돼요');
+});
+
 /* ── settings ── */
 function openSettings(){
   show('set');
@@ -1297,7 +1443,7 @@ $('#fileI').addEventListener('change',async e=>{
       }
       for(const d in (data.entries||{})){
         const src=data.entries[d];
-        const en={date:d,title:src.title||'',blocks:Array.isArray(src.blocks)?src.blocks:[],createdAt:src.createdAt||Date.now(),updatedAt:src.updatedAt||Date.now()};
+        const en={date:d,title:src.title||'',bgm:src.bgm||null,blocks:Array.isArray(src.blocks)?src.blocks:[],createdAt:src.createdAt||Date.now(),updatedAt:src.updatedAt||Date.now()};
         await saveEntry(en,true);
       }
       if(data.settings&&data.settings.startDate){S.set=Object.assign(S.set,data.settings);await saveSettings()}
