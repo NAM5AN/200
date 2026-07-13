@@ -50,7 +50,7 @@ header{padding:calc(18px + env(safe-area-inset-top)) 2px 14px;display:flex;align
 .btn.sm{padding:6px 10px;font-size:12px;border-radius:8px}
 .ico{appearance:none;background:none;border:0;color:var(--tx2);font-size:20px;cursor:pointer;padding:6px 10px;font-family:inherit}
 .label{font-size:10px;color:var(--tx3);letter-spacing:.28em;text-transform:uppercase;font-weight:700;margin-bottom:8px}
-input[type=text],input[type=date],textarea{
+input[type=text],input[type=date],input[type=password],input[type=email],textarea{
   width:100%;background:var(--ink2);border:1px solid var(--line);border-radius:10px;
   color:var(--tx);font-size:16px;padding:11px 12px;font-family:inherit;outline:none;
 }
@@ -161,10 +161,11 @@ figure.ph figcaption{font-size:12px;color:var(--tx2);padding:9px 12px}
 #addbar .row .btn{flex:1}
 #addbar .hint{font-size:10px;color:var(--tx3);text-align:center;margin-top:7px;letter-spacing:.05em}
 
-/* settings */
+/* settings / auth */
 .frow{margin-bottom:16px}
 .frow .fl{font-size:12px;color:var(--tx2);margin-bottom:6px;font-weight:600}
 .frow .fh{font-size:11px;color:var(--tx3);margin-top:5px}
+.fh{font-size:11px;color:var(--tx3)}
 .setBtns{display:flex;flex-direction:column;gap:9px;margin-top:6px}
 
 /* modal / toast / loader */
@@ -199,6 +200,26 @@ figure.ph figcaption{font-size:12px;color:var(--tx2);padding:9px 12px}
   <hr class="hair">
 
   <div id="loader" class="lat">Loading ✦</div>
+
+  <!-- 로그인 -->
+  <section id="scr-auth" class="hide">
+    <div class="card" style="margin-top:26px">
+      <div class="label lat">Sign In</div>
+      <div class="frow">
+        <div class="fl">이메일</div>
+        <input type="email" id="auEmail" autocomplete="email" placeholder="me@example.com">
+      </div>
+      <div class="frow" style="margin-bottom:10px">
+        <div class="fl">비밀번호</div>
+        <input type="password" id="auPw" autocomplete="current-password" placeholder="6자 이상">
+      </div>
+      <div class="setBtns">
+        <button class="btn pri" id="auLogin">로그인</button>
+        <button class="btn ghost" id="auSign">처음이에요 — 계정 만들기</button>
+      </div>
+      <div class="fh" id="auMsg" style="margin-top:12px"></div>
+    </div>
+  </section>
 
   <!-- 달력 -->
   <section id="scr-cal" class="hide">
@@ -267,13 +288,17 @@ figure.ph figcaption{font-size:12px;color:var(--tx2);padding:9px 12px}
       </div>
       <button class="btn pri" id="sSave" style="width:100%">저장</button>
     </div>
-    <div class="card">
+    <div class="card" style="margin-bottom:12px">
       <div class="label lat">Backup</div>
       <div class="setBtns">
         <button class="btn" id="btnExport">⬇ 전체 백업 내려받기 (사진 포함 JSON)</button>
         <button class="btn ghost" id="btnImport">⬆ 백업 파일 불러오기</button>
       </div>
-      <div class="fh" style="margin-top:10px">기록은 자동 저장되지만, 가끔 백업 파일을 내려받아 두면 어떤 경우에도 소실되지 않아요.</div>
+      <div class="fh" style="margin-top:10px">기록은 Supabase에 자동 저장돼요. 그래도 가끔 백업 파일을 내려받아 두면 어떤 경우에도 소실되지 않아요.</div>
+    </div>
+    <div class="card">
+      <div class="label lat">Account</div>
+      <button class="btn ghost" id="btnLogout" style="width:100%">로그아웃</button>
     </div>
   </section>
 </div>
@@ -306,28 +331,23 @@ figure.ph figcaption{font-size:12px;color:var(--tx2);padding:9px 12px}
 <input type="file" id="fileQ" accept="image/*" multiple hidden>
 <input type="file" id="fileI" accept="application/json,.json" hidden>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 'use strict';
+
+/* ═══════ 여기 두 줄만 본인 값으로 교체 ═══════
+   Supabase 대시보드 → Project Settings → API */
+const SUPABASE_URL='https://YOUR-PROJECT.supabase.co';
+const SUPABASE_ANON_KEY='YOUR-ANON-KEY';
+/* ═══════════════════════════════════════════ */
+
+const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+let UID=null;
+
 const $=s=>document.querySelector(s);
 const DOW=['일','월','화','수','목','금','토'];
-const K={set:'synk:settings',idx:'synk:index',e:d=>'synk:entry:'+d,p:id=>'synk:photo:'+id};
-const S={set:{startDate:null,myName:'',partnerName:''},idx:[],cur:null,mode:'view',month:new Date(),focus:-1,dirty:false};
-const PC={}; // photo cache
-const mem={}; // in-memory fallback
-
-/* ── storage ── */
-async function sGet(k){
-  try{const r=await window.storage.get(k,false);return (r&&r.value!=null)?JSON.parse(r.value):(k in mem?mem[k]:null)}
-  catch(e){return k in mem?mem[k]:null}
-}
-async function sSet(k,v){
-  mem[k]=v;
-  try{const r=await window.storage.set(k,JSON.stringify(v),false);if(!r)warnSave()}
-  catch(e){warnSave()}
-}
-async function sDel(k){delete mem[k];try{await window.storage.delete(k,false)}catch(e){}}
-let warned=false;
-function warnSave(){if(warned)return;warned=true;toast('저장소 오류 — 설정에서 백업 파일을 꼭 내려받아 두세요')}
+const S={set:{startDate:'2026-04-05',myName:'',partnerName:''},idx:[],cur:null,mode:'view',month:new Date(),focus:-1,dirty:false};
+const PC={}; // photo url/dataURL cache
 
 /* ── utils ── */
 function pad(n){return String(n).padStart(2,'0')}
@@ -339,6 +359,8 @@ function ddayLabel(n){return n>0?'D+'+n:'D-'+(1-n)}
 function fmtDate(s){const d=parseYmd(s);return d.getFullYear()+'.'+pad(d.getMonth()+1)+'.'+pad(d.getDate())+' '+DOW[d.getDay()]}
 function fmtTime(ts){const d=new Date(ts);return pad(d.getHours())+':'+pad(d.getMinutes())}
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c])}
+function grow(el){el.style.height='auto';el.style.height=el.scrollHeight+'px'}
+function dataURLtoBlob(u){const a=u.split(',');const bin=atob(a[1]);const arr=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);return new Blob([arr],{type:'image/jpeg'})}
 let tt;
 function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('on'),2200)}
 function modal(html){$('#mBody').innerHTML=html;$('#modal').classList.remove('hide')}
@@ -350,9 +372,92 @@ function confirmM(msg,onYes){
 }
 $('#modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()});
 
+/* ── supabase data layer ── */
+async function loadSettings(){
+  const r=await sb.from('diary_settings').select('*').eq('user_id',UID).maybeSingle();
+  if(r.data){
+    S.set={startDate:r.data.start_date,myName:r.data.my_name||'',partnerName:r.data.partner_name||''};
+    return false;
+  }
+  S.set={startDate:'2026-04-05',myName:'',partnerName:''};
+  await saveSettings();
+  return true; // 첫 사용
+}
+async function saveSettings(){
+  try{
+    const r=await sb.from('diary_settings').upsert({
+      user_id:UID,start_date:S.set.startDate,my_name:S.set.myName,
+      partner_name:S.set.partnerName,updated_at:new Date().toISOString()
+    });
+    return !r.error;
+  }catch(e){return false}
+}
+async function loadIndex(){
+  const r=await sb.from('diary_entries')
+    .select('entry_date,snippet,photo_count,chat_count')
+    .eq('user_id',UID).order('entry_date',{ascending:false});
+  S.idx=(r.data||[]).map(o=>({d:o.entry_date,s:o.snippet||'',p:o.photo_count||0,c:o.chat_count||0}));
+}
+async function loadEntry(d){
+  const r=await sb.from('diary_entries').select('*').eq('user_id',UID).eq('entry_date',d).maybeSingle();
+  if(!r.data)return null;
+  return {
+    date:r.data.entry_date,
+    title:r.data.title||'',
+    blocks:Array.isArray(r.data.blocks)?r.data.blocks:[],
+    createdAt:new Date(r.data.created_at).getTime(),
+    updatedAt:new Date(r.data.updated_at).getTime()
+  };
+}
+async function saveEntry(e,withCreated){
+  try{
+    if(isEmpty(e)){
+      await sb.from('diary_entries').delete().match({user_id:UID,entry_date:e.date});
+      return true;
+    }
+    const payload={
+      user_id:UID,entry_date:e.date,title:e.title||'',blocks:e.blocks,
+      snippet:snippet(e),
+      photo_count:e.blocks.filter(b=>b.type==='photo').length,
+      chat_count:e.blocks.filter(b=>b.type==='chat').length,
+      updated_at:new Date(e.updatedAt||Date.now()).toISOString()
+    };
+    if(withCreated&&e.createdAt)payload.created_at=new Date(e.createdAt).toISOString();
+    const r=await sb.from('diary_entries').upsert(payload,{onConflict:'user_id,entry_date'});
+    return !r.error;
+  }catch(err){return false}
+}
+async function deleteEntryRow(d){
+  try{await sb.from('diary_entries').delete().match({user_id:UID,entry_date:d})}catch(e){}
+}
+async function uploadPhoto(id,dataURL){
+  try{
+    const r=await sb.storage.from('diary-photos')
+      .upload(UID+'/'+id+'.jpg',dataURLtoBlob(dataURL),{contentType:'image/jpeg',upsert:true});
+    return !r.error;
+  }catch(e){return false}
+}
+async function signPhoto(id){
+  try{
+    const r=await sb.storage.from('diary-photos').createSignedUrl(UID+'/'+id+'.jpg',86400);
+    return r.data?r.data.signedUrl:null;
+  }catch(e){return null}
+}
+async function removePhotoIds(ids){
+  if(!ids||!ids.length)return;
+  try{await sb.storage.from('diary-photos').remove(ids.map(id=>UID+'/'+id+'.jpg'))}catch(e){}
+}
+async function downloadPhotoB64(id){
+  try{
+    const r=await sb.storage.from('diary-photos').download(UID+'/'+id+'.jpg');
+    if(!r.data)return null;
+    return await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(fr.result);fr.onerror=()=>res(null);fr.readAsDataURL(r.data)});
+  }catch(e){return null}
+}
+
 /* ── screens ── */
 function show(name){
-  ['cal','entry','set'].forEach(n=>$('#scr-'+n).classList.toggle('hide',n!==name));
+  ['auth','cal','entry','set'].forEach(n=>$('#scr-'+n).classList.toggle('hide',n!==name));
   $('#addbar').classList.toggle('hide',!(name==='entry'&&S.mode==='edit'));
   $('#qbar').classList.toggle('hide',!(name==='entry'&&S.mode==='view'));
   window.scrollTo(0,0);
@@ -368,7 +473,7 @@ function renderHeader(){
   if(!S.set.startDate){el.textContent='설정';return}
   el.textContent=ddayLabel(dday(td));
 }
-$('#hDday').onclick=()=>{if(!S.set.startDate){openSettings();return}openEntry(ymd(new Date()))};
+$('#hDday').onclick=()=>{if(UID)openEntry(ymd(new Date()))};
 
 /* ── calendar ── */
 $('#calDow').innerHTML=DOW.map(d=>'<div class="dow">'+d+'</div>').join('');
@@ -402,7 +507,7 @@ $('#nextM').onclick=()=>{S.month=new Date(S.month.getFullYear(),S.month.getMonth
 
 function renderRecent(){
   const el=$('#recentList');
-  if(!S.idx.length){el.innerHTML='<div class="recEmpty">아직 기록이 없어요. 달력에서 오늘을 눌러 첫 일기를 남겨보세요 ✦</div>';return}
+  if(!S.idx.length){el.innerHTML='<div class="recEmpty">아직 기록이 없어요. 위 Quick Log에 아무거나 던져보세요 ✦</div>';return}
   el.innerHTML=S.idx.slice(0,5).map(o=>{
     const dn=dday(o.d);
     const extra=(o.p?' 📷'+o.p:'')+(o.c?' 💬':'');
@@ -424,13 +529,12 @@ async function openEntry(ds){
   await flushSave();
   show('entry');
   $('#blocks').innerHTML='<div class="loading">불러오는 중…</div>';
-  let e=await sGet(K.e(ds));
+  let e=await loadEntry(ds);
   let isNew=false;
-  if(!e){isNew=true;e={date:ds,createdAt:Date.now(),updatedAt:Date.now(),blocks:[{type:'text',text:''}]}}
-  if(!Array.isArray(e.blocks))e.blocks=[];
+  if(!e){isNew=true;e={date:ds,title:'',createdAt:Date.now(),updatedAt:Date.now(),blocks:[{type:'text',text:'',ts:Date.now()}]}}
   S.cur=e;S.mode=isNew?'edit':'view';S.focus=-1;S.dirty=false;
   const ids=e.blocks.filter(b=>b.type==='photo'&&!(b.id in PC)).map(b=>b.id);
-  await Promise.all(ids.map(async id=>{PC[id]=await sGet(K.p(id))}));
+  await Promise.all(ids.map(async id=>{PC[id]=await signPhoto(id)}));
   renderEntry();
 }
 function renderEntry(){
@@ -474,7 +578,10 @@ function renderBlocks(){
   const e=S.cur,edit=S.mode==='edit',n=e.blocks.length;
   let h='',lastT=null;
   e.blocks.forEach((b,i)=>{
-    if(!edit&&b.ts){const tc=fmtTime(b.ts);if(tc!==lastT){h+='<div class="tchip lat">'+tc+'</div>';lastT=tc}}
+    if(!edit){
+      const tsv=b.ts||(i===0?e.createdAt:null);
+      if(tsv){const tc=fmtTime(tsv);if(tc!==lastT){h+='<div class="tchip lat">'+tc+'</div>';lastT=tc}}
+    }
     const T=edit?toolsHtml(i,n):'';
     if(b.type==='text'){
       h+=edit
@@ -497,7 +604,6 @@ function renderBlocks(){
   $('#blocks').innerHTML=h;
   if(edit)document.querySelectorAll('#blocks textarea').forEach(grow);
 }
-function grow(el){el.style.height='auto';el.style.height=el.scrollHeight+'px'}
 
 /* block events */
 $('#blocks').addEventListener('input',e=>{
@@ -535,8 +641,8 @@ $('#blocks').addEventListener('click',e=>{
     const b=arr[i];
     const doDel=()=>{
       arr.splice(i,1);
-      if(b.type==='photo'){delete PC[b.id];sDel(K.p(b.id))}
-      if(!arr.length)arr.push({type:'text',text:''});
+      if(b.type==='photo'){delete PC[b.id];removePhotoIds([b.id])}
+      if(!arr.length)arr.push({type:'text',text:'',ts:Date.now()});
       S.focus=-1;touch();renderBlocks();
     };
     if(b.type==='text'&&!b.text.trim())doDel();
@@ -558,27 +664,35 @@ $('#eDel').onclick=()=>{
   const e=S.cur;if(!e)return;
   confirmM(fmtDate(e.date)+' 일기를 완전히 삭제할까요?',async()=>{
     S.dirty=false;clearTimeout(saveTimer);
-    for(const b of e.blocks)if(b.type==='photo'){delete PC[b.id];await sDel(K.p(b.id))}
-    await sDel(K.e(e.date));
+    const ids=e.blocks.filter(b=>b.type==='photo').map(b=>b.id);
+    ids.forEach(id=>delete PC[id]);
+    await removePhotoIds(ids);
+    await deleteEntryRow(e.date);
     S.idx=S.idx.filter(o=>o.d!==e.date);
-    await sSet(K.idx,S.idx);
     S.cur=null;show('cal');renderCal();renderRecent();toast('삭제됐어요');
   });
 };
 
 /* ── autosave ── */
 let saveTimer=null;
-function touch(){S.dirty=true;clearTimeout(saveTimer);saveTimer=setTimeout(()=>persistEntry(),1200)}
+function touch(){S.dirty=true;clearTimeout(saveTimer);saveTimer=setTimeout(()=>persistEntry(true),1500)}
 async function persistEntry(silent){
   if(!S.cur||!S.dirty)return;
+  const cur=S.cur;
   S.dirty=false;clearTimeout(saveTimer);
-  S.cur.updatedAt=Date.now();
-  await sSet(K.e(S.cur.date),S.cur);
-  await updateIndex(S.cur);
-  if(!silent)toast('자동 저장됨');
+  cur.updatedAt=Date.now();
+  const ok=await saveEntry(cur);
+  if(!ok){
+    S.dirty=true;
+    toast('동기화 실패 — 잠시 후 다시 시도해요');
+    saveTimer=setTimeout(()=>persistEntry(true),5000);
+    return;
+  }
+  updateIndexLocal(cur);
+  if(!silent)toast('저장됨 ✦');
 }
 async function flushSave(withToast){
-  if(S.dirty){await persistEntry(!withToast);if(withToast)toast('저장 완료 ✦')}
+  if(S.dirty){await persistEntry(true);if(withToast&&!S.dirty)toast('저장 완료 ✦')}
 }
 document.addEventListener('visibilitychange',()=>{if(document.hidden)flushSave()});
 function snippet(e){
@@ -590,22 +704,21 @@ function snippet(e){
   return '';
 }
 function isEmpty(e){return !(e.title&&e.title.trim())&&e.blocks.every(b=>b.type==='text'&&!b.text.trim())}
-async function updateIndex(e){
-  const row={d:e.date,s:snippet(e),p:e.blocks.filter(b=>b.type==='photo').length,c:e.blocks.filter(b=>b.type==='chat').length};
+function updateIndexLocal(e){
   const i=S.idx.findIndex(o=>o.d===e.date);
   if(isEmpty(e)){
-    if(i>=0){S.idx.splice(i,1);await sDel(K.e(e.date));await sSet(K.idx,S.idx)}
+    if(i>=0)S.idx.splice(i,1);
   }else{
+    const row={d:e.date,s:snippet(e),p:e.blocks.filter(b=>b.type==='photo').length,c:e.blocks.filter(b=>b.type==='chat').length};
     if(i>=0)S.idx[i]=row;else S.idx.push(row);
     S.idx.sort((a,b)=>a.d<b.d?1:-1);
-    await sSet(K.idx,S.idx);
   }
   renderCal();renderRecent();
 }
 
-/* ── add blocks ── */
+/* ── add blocks (편집 모드) ── */
 function doAddText(p){
-  S.cur.blocks.splice(p,0,{type:'text',text:''});
+  S.cur.blocks.splice(p,0,{type:'text',text:'',ts:Date.now()});
   S.focus=p;touch();renderBlocks();
   const ta=document.querySelector('.blk[data-i="'+p+'"] textarea');
   if(ta)ta.focus();
@@ -624,9 +737,10 @@ $('#fileP').addEventListener('change',async e=>{
       const data=await compress(f);
       if(!data){toast('사진이 너무 커요: '+f.name);continue}
       const id='p'+Date.now()+Math.random().toString(36).slice(2,7);
+      const ok=await uploadPhoto(id,data);
+      if(!ok){toast('사진 업로드 실패 — 네트워크 확인');continue}
       PC[id]=data;
-      await sSet(K.p(id),data);
-      S.cur.blocks.splice(p,0,{type:'photo',id:id,cap:''});
+      S.cur.blocks.splice(p,0,{type:'photo',id:id,cap:'',ts:Date.now()});
       S.focus=p;p++;
     }catch(err){toast('사진 추가 실패')}
   }
@@ -671,10 +785,10 @@ function openChatModal(){
     if(!msgs.length){toast('불러올 메시지를 찾지 못했어요');return}
     if(msgs.length>1500){msgs=msgs.slice(0,1500);toast('메시지가 많아 1500개까지만 가져왔어요')}
     const me=$('#chatMe').value.trim();
-    if(me!==S.set.myName){S.set.myName=me;sSet(K.set,S.set);renderHeader()}
+    if(me!==S.set.myName){S.set.myName=me;saveSettings();renderHeader()}
     const list=msgs.map(m=>({n:m.name,t:m.time,x:m.text,me:!!me&&m.name.trim()===me}));
     const p=chatPos;
-    S.cur.blocks.splice(p,0,{type:'chat',msgs:list,open:false});
+    S.cur.blocks.splice(p,0,{type:'chat',msgs:list,open:false,ts:Date.now()});
     S.focus=p;touch();renderBlocks();closeModal();
     toast(list.length+'개 메시지를 가져왔어요');
   };
@@ -739,15 +853,22 @@ async function qSubmit(pfx){
   const dateStr=(pfx==='e'&&S.cur)?S.cur.date:ymd(new Date());
   const ts=Date.now();
   S.dirty=false;clearTimeout(saveTimer);
-  let en=(S.cur&&S.cur.date===dateStr)?S.cur:await sGet(K.e(dateStr));
-  if(!en)en={date:dateStr,createdAt:ts,updatedAt:ts,blocks:[]};
+  let en=(S.cur&&S.cur.date===dateStr)?S.cur:await loadEntry(dateStr);
+  if(!en)en={date:dateStr,title:'',createdAt:ts,updatedAt:ts,blocks:[]};
   if(!Array.isArray(en.blocks))en.blocks=[];
   if(en.blocks.length===1&&en.blocks[0].type==='text'&&!en.blocks[0].text.trim())en.blocks=[];
-  for(const s of shots){PC[s.id]=s.src;await sSet(K.p(s.id),s.src);en.blocks.push({type:'photo',id:s.id,cap:'',ts:ts})}
+  toast('기록 중…');
+  for(const s of shots){
+    const ok=await uploadPhoto(s.id,s.src);
+    if(!ok){toast('사진 업로드 실패 — 네트워크 확인 후 다시 시도해 주세요');return}
+    PC[s.id]=s.src;
+    en.blocks.push({type:'photo',id:s.id,cap:'',ts:ts});
+  }
   if(tx)en.blocks.push({type:'text',text:tx,ts:ts});
   en.updatedAt=ts;
-  await sSet(K.e(dateStr),en);
-  await updateIndex(en);
+  const ok=await saveEntry(en,true);
+  if(!ok){toast('저장 실패 — 네트워크 확인 후 다시 시도해 주세요');return}
+  updateIndexLocal(en);
   if(S.cur&&S.cur.date===dateStr){S.cur=en;renderEntry()}
   QP[pfx]=[];ta.value='';grow(ta);renderQThumbs(pfx);
   const dn=dday(dateStr);
@@ -761,12 +882,11 @@ $('#hQtx').addEventListener('input',e=>grow(e.target));
 $('#eQtx').addEventListener('input',e=>grow(e.target));
 
 /* ── settings ── */
-function openSettings(first){
+function openSettings(){
   show('set');
   $('#inStart').value=S.set.startDate||'2026-04-05';
   $('#inMe').value=S.set.myName||'';
   $('#inYou').value=S.set.partnerName||'';
-  if(first)toast('처음 만난 날을 먼저 설정해 주세요 ✦');
 }
 $('#sBack').onclick=()=>{show('cal');renderCal();renderRecent()};
 $('#sSave').onclick=async()=>{
@@ -775,23 +895,30 @@ $('#sSave').onclick=async()=>{
   S.set.startDate=sd;
   S.set.myName=$('#inMe').value.trim();
   S.set.partnerName=$('#inYou').value.trim();
-  await sSet(K.set,S.set);
+  const ok=await saveSettings();
+  if(!ok){toast('저장 실패 — 네트워크를 확인해 주세요');return}
   renderHeader();renderCal();renderRecent();
   toast('설정 저장 완료 ✦ 오늘은 '+ddayLabel(dday(ymd(new Date()))));
   show('cal');
+};
+$('#btnLogout').onclick=()=>{
+  confirmM('로그아웃할까요?',async()=>{
+    try{await sb.auth.signOut()}catch(e){}
+    location.reload();
+  });
 };
 
 /* ── backup ── */
 $('#btnExport').onclick=async()=>{
   try{
-    toast('백업 생성 중…');
-    const out={app:'synk-archive',v:1,at:new Date().toISOString(),settings:S.set,index:S.idx,entries:{},photos:{}};
+    toast('백업 생성 중… (사진이 많으면 시간이 걸려요)');
+    const out={app:'synk-archive',v:2,at:new Date().toISOString(),settings:S.set,index:S.idx,entries:{},photos:{}};
     for(const o of S.idx){
-      const e=await sGet(K.e(o.d));
+      const e=await loadEntry(o.d);
       if(!e)continue;
       out.entries[o.d]=e;
       for(const b of e.blocks)if(b.type==='photo'&&!(b.id in out.photos)){
-        out.photos[b.id]=PC[b.id]||await sGet(K.p(b.id));
+        out.photos[b.id]=await downloadPhotoB64(b.id);
       }
     }
     const blob=new Blob([JSON.stringify(out)],{type:'application/json'});
@@ -810,40 +937,78 @@ $('#fileI').addEventListener('change',async e=>{
     const data=JSON.parse(await f.text());
     if(data.app!=='synk-archive')throw 0;
     confirmM('백업의 기록 '+Object.keys(data.entries||{}).length+'개를 불러올까요? 같은 날짜는 백업 내용으로 대체돼요.',async()=>{
-      toast('복원 중…');
+      toast('복원 중… (사진이 많으면 시간이 걸려요)');
       for(const id in (data.photos||{})){
-        if(data.photos[id]){PC[id]=data.photos[id];await sSet(K.p(id),data.photos[id])}
+        if(data.photos[id]){
+          const ok=await uploadPhoto(id,data.photos[id]);
+          if(ok)PC[id]=data.photos[id];
+        }
       }
       for(const d in (data.entries||{})){
-        await sSet(K.e(d),data.entries[d]);
-        const i=S.idx.findIndex(o=>o.d===d);
-        const src=(data.index||[]).find(o=>o.d===d)||{d:d,s:snippet(data.entries[d]),p:0,c:0};
-        if(i>=0)S.idx[i]=src;else S.idx.push(src);
+        const src=data.entries[d];
+        const en={date:d,title:src.title||'',blocks:Array.isArray(src.blocks)?src.blocks:[],createdAt:src.createdAt||Date.now(),updatedAt:src.updatedAt||Date.now()};
+        await saveEntry(en,true);
       }
-      S.idx.sort((a,b)=>a.d<b.d?1:-1);
-      await sSet(K.idx,S.idx);
-      if(!S.set.startDate&&data.settings&&data.settings.startDate){S.set=data.settings;await sSet(K.set,S.set)}
+      if(data.settings&&data.settings.startDate){S.set=Object.assign(S.set,data.settings);await saveSettings()}
+      await loadIndex();
       renderHeader();renderCal();renderRecent();show('cal');
       toast('복원 완료 ✦');
     });
   }catch(err){toast('백업 파일을 읽을 수 없어요')}
 });
 
-/* ── init ── */
-(async function init(){
-  let first=false;
-  try{
-    const st=await sGet(K.set);
-    if(st&&typeof st==='object')S.set=Object.assign(S.set,st);
-    else first=true;
-    if(!S.set.startDate){S.set.startDate='2026-04-05';await sSet(K.set,S.set)}
-    const ix=await sGet(K.idx);
-    if(Array.isArray(ix))S.idx=ix;
-  }catch(e){}
+/* ── auth / init ── */
+function authMsg(m){$('#auMsg').textContent=m}
+$('#auLogin').onclick=async()=>{
+  const email=$('#auEmail').value.trim(),pw=$('#auPw').value;
+  if(!email||!pw){authMsg('이메일과 비밀번호를 입력해 주세요');return}
+  authMsg('로그인 중…');
+  const r=await sb.auth.signInWithPassword({email:email,password:pw});
+  if(r.error){authMsg('로그인 실패: '+r.error.message);return}
+  UID=r.data.session.user.id;
+  authMsg('');
+  await init();
+};
+$('#auSign').onclick=async()=>{
+  const email=$('#auEmail').value.trim(),pw=$('#auPw').value;
+  if(!email||pw.length<6){authMsg('이메일과 6자 이상 비밀번호를 입력해 주세요');return}
+  authMsg('계정 생성 중…');
+  const r=await sb.auth.signUp({email:email,password:pw});
+  if(r.error){authMsg('가입 실패: '+r.error.message);return}
+  if(r.data.session){
+    UID=r.data.session.user.id;
+    authMsg('');
+    await init();
+  }else{
+    authMsg('가입은 됐지만 이메일 인증이 켜져 있어요. Supabase → Authentication → Providers → Email에서 Confirm email을 끄고 로그인하세요.');
+  }
+};
+async function init(){
+  show('cal');
+  $('#loader').classList.remove('hide');
+  const first=await loadSettings();
+  await loadIndex();
   $('#loader').classList.add('hide');
   renderHeader();renderCal();renderRecent();
-  show('cal');
-  if(first)toast('오늘 D+100 ✦ 200일은 10월 21일이에요');
+  if(first)toast('오늘 '+ddayLabel(dday(ymd(new Date())))+' ✦ 200일은 10월 21일이에요');
+}
+(async function boot(){
+  if(SUPABASE_URL.indexOf('YOUR-')>=0){
+    $('#loader').classList.add('hide');
+    show('auth');
+    authMsg('index.html 상단의 SUPABASE_URL / SUPABASE_ANON_KEY를 먼저 본인 값으로 교체하고 배포하세요.');
+    return;
+  }
+  try{
+    const r=await sb.auth.getSession();
+    if(r.data&&r.data.session){
+      UID=r.data.session.user.id;
+      await init();
+      return;
+    }
+  }catch(e){}
+  $('#loader').classList.add('hide');
+  show('auth');
 })();
 </script>
 </body>
