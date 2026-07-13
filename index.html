@@ -787,8 +787,13 @@ $('#addText').onclick=()=>doAddText(insertPos());
 $('#addPhoto').onclick=()=>doAddPhoto(insertPos());
 $('#fileP').addEventListener('change',async e=>{
   const files=[...e.target.files];if(!files.length)return;
+  await addFilesToEntry(files,photoPos);
+});
+async function addFilesToEntry(files,startPos){
+  if(!S.cur)return;
   toast('처리 중…');
-  let p=photoPos;
+  let p=(startPos!=null?startPos:S.cur.blocks.length);
+  let added=0;
   for(const f of files){
     try{
       if(f.type&&f.type.indexOf('video')===0){
@@ -800,21 +805,22 @@ $('#fileP').addEventListener('change',async e=>{
         if(!ok){toast('영상 업로드 실패 — 네트워크 확인');continue}
         PC[id]=URL.createObjectURL(f);
         S.cur.blocks.splice(p,0,{type:'video',id:id,ext:ext,cap:'',ts:Date.now()});
-        S.focus=p;p++;
-      }else{
+        S.focus=p;p++;added++;
+      }else if(f.type&&f.type.indexOf('image')===0){
         const data=await compress(f);
-        if(!data){toast('사진이 너무 커요: '+f.name);continue}
+        if(!data){toast('사진이 너무 커요: '+(f.name||''));continue}
         const id='p'+Date.now()+Math.random().toString(36).slice(2,7);
         const ok=await uploadPhoto(id,data);
         if(!ok){toast('사진 업로드 실패 — 네트워크 확인');continue}
         PC[id]=data;
         S.cur.blocks.splice(p,0,{type:'photo',id:id,cap:'',ts:Date.now()});
-        S.focus=p;p++;
+        S.focus=p;p++;added++;
       }
     }catch(err){toast('추가 실패')}
   }
-  touch();renderBlocks();
-});
+  if(added){touch();renderBlocks()}
+  return added;
+}
 function readFile(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(f)})}
 function loadImg(src){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src})}
 async function compress(file){
@@ -965,6 +971,42 @@ $('#hQgo').onclick=()=>qSubmit('h');
 $('#eQgo').onclick=()=>qSubmit('e');
 $('#hQtx').addEventListener('input',e=>grow(e.target));
 $('#eQtx').addEventListener('input',e=>grow(e.target));
+
+/* ── 붙여넣기로 사진 첨부 ── */
+document.addEventListener('paste',async e=>{
+  const items=(e.clipboardData||{}).items;
+  if(!items)return;
+  const imgs=[];
+  for(const it of items){
+    if(it.kind==='file'&&it.type&&it.type.indexOf('image')===0){
+      const f=it.getAsFile();if(f)imgs.push(f);
+    }
+  }
+  if(!imgs.length)return; // 텍스트 붙여넣기는 그대로 통과
+  e.preventDefault();
+  // 편집 모드: 포커스한 블록 아래에 바로 삽입
+  if(S.cur&&S.mode==='edit'){
+    await addFilesToEntry(imgs,insertPos());
+    return;
+  }
+  // 보기 모드(일기 열림): 하단 ✦기록 대기열에 담기
+  if(S.cur&&S.mode==='view'){
+    for(const f of imgs){
+      const src=await compress(f);
+      if(src)QP.e.push({id:'p'+Date.now()+Math.random().toString(36).slice(2,7),kind:'p',src:src});
+    }
+    renderQThumbs('e');
+    toast(imgs.length+'장 붙여넣음 · ✦기록을 눌러 저장');
+    return;
+  }
+  // 달력 화면: Quick Log 대기열에 담기
+  for(const f of imgs){
+    const src=await compress(f);
+    if(src)QP.h.push({id:'p'+Date.now()+Math.random().toString(36).slice(2,7),kind:'p',src:src});
+  }
+  renderQThumbs('h');
+  toast(imgs.length+'장 붙여넣음 · 기록을 눌러 저장');
+});
 
 /* ── settings ── */
 function openSettings(){
