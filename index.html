@@ -75,6 +75,7 @@ textarea::placeholder,input::placeholder{color:#575c66}
 .qth{position:relative;width:58px;height:58px;border-radius:10px;overflow:hidden;border:1px solid var(--line2)}
 .qth img{width:100%;height:100%;object-fit:cover;display:block}
 .qth button{position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:50%;border:0;background:rgba(10,11,13,.85);color:var(--tx);font-size:10px;line-height:1;cursor:pointer}
+.qth.qthv{display:flex;align-items:center;justify-content:center;font-size:20px;background:var(--card2)}
 .tchip{display:inline-block;font-size:10px;color:var(--tx2);letter-spacing:.16em;border:1px solid var(--line);border-radius:999px;padding:3px 11px;margin:2px 0 10px;background:var(--card)}
 #qbar{position:fixed;left:0;right:0;bottom:0;z-index:20;padding:10px 16px calc(12px + env(safe-area-inset-bottom));background:linear-gradient(180deg,rgba(11,12,14,0),rgba(11,12,14,.94) 30%)}
 #qbar .inner{max-width:520px;margin:0 auto;background:var(--card);border:1px solid var(--line2);border-radius:16px;padding:8px 10px}
@@ -135,6 +136,19 @@ figure.ph img{width:100%;display:block}
 figure.ph figcaption{font-size:12px;color:var(--tx2);padding:9px 12px}
 .blk .cap{border:0;border-top:1px solid var(--line);border-radius:0;background:var(--card);font-size:13px}
 .phEmpty{width:100%;aspect-ratio:4/3;background:var(--card2);display:flex;align-items:center;justify-content:center;color:var(--tx3);font-size:12px}
+
+/* video */
+.vid{background:#000;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.vid video{width:100%;display:block;background:#000}
+.vctl{display:flex;align-items:center;gap:7px;padding:8px 10px;background:var(--card);border-top:1px solid var(--line)}
+.vctl button{appearance:none;background:none;border:0;color:var(--tx);font-size:14px;cursor:pointer;padding:2px 4px;font-family:inherit;line-height:1}
+.vctl .vtime,.vctl .vdur{font-size:10px;color:var(--tx3);letter-spacing:.04em;min-width:28px;text-align:center}
+.vctl input[type=range]{-webkit-appearance:none;appearance:none;height:3px;border-radius:2px;background:var(--line2);outline:none;padding:0;border:0}
+.vctl .vseek{flex:1;min-width:40px}
+.vctl .vvol{width:48px}
+.vctl input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:linear-gradient(180deg,#eef0f4,#b9bec8);border:1px solid #dfe2e8;cursor:pointer}
+.vctl input[type=range]::-moz-range-thumb{width:13px;height:13px;border-radius:50%;background:#d9dce3;border:1px solid #dfe2e8;cursor:pointer}
+.vcap{font-size:12px;color:var(--tx2);padding:8px 2px 0}
 
 /* chat */
 .chatbox{background:var(--ink2);border:1px solid var(--line);border-radius:14px;padding:12px}
@@ -227,7 +241,7 @@ figure.ph figcaption{font-size:12px;color:var(--tx2);padding:9px 12px}
       <div class="qhead"><span class="label lat" style="margin:0">Quick Log</span><span class="qdate" id="hQdate">—</span></div>
       <textarea id="hQtx" class="qtx" placeholder="지금 떠오르는 걸 그냥 적어요 — 날짜·시간은 알아서 붙어요"></textarea>
       <div class="qthumbs hide" id="hQthumbs"></div>
-      <div class="qrow"><button class="btn" id="hQph">📷 사진</button><button class="btn pri" id="hQgo">기록 ✦</button></div>
+      <div class="qrow"><button class="btn" id="hQph">📷 사진·영상</button><button class="btn pri" id="hQgo">기록 ✦</button></div>
     </div>
     <div class="card calCard">
       <div class="calHead">
@@ -294,7 +308,7 @@ figure.ph figcaption{font-size:12px;color:var(--tx2);padding:9px 12px}
         <button class="btn" id="btnExport">⬇ 전체 백업 내려받기 (사진 포함 JSON)</button>
         <button class="btn ghost" id="btnImport">⬆ 백업 파일 불러오기</button>
       </div>
-      <div class="fh" style="margin-top:10px">기록은 Supabase에 자동 저장돼요. 그래도 가끔 백업 파일을 내려받아 두면 어떤 경우에도 소실되지 않아요.</div>
+      <div class="fh" style="margin-top:10px">기록은 Supabase에 자동 저장돼요. 그래도 가끔 백업 파일을 내려받아 두면 어떤 경우에도 소실되지 않아요. 영상은 용량 문제로 백업 파일에는 포함되지 않고 서버에만 보관돼요.</div>
     </div>
     <div class="card">
       <div class="label lat">Account</div>
@@ -307,7 +321,7 @@ figure.ph figcaption{font-size:12px;color:var(--tx2);padding:9px 12px}
   <div class="inner">
     <div class="row">
       <button class="btn" id="addText">＋ 글</button>
-      <button class="btn" id="addPhoto">＋ 사진</button>
+      <button class="btn" id="addPhoto">＋ 사진·영상</button>
       <button class="btn" id="addChat">＋ 카톡</button>
     </div>
     <div class="hint">선택한 블록 아래에 추가 · 블록 도구 ↑↓＋✕ 로 이동·삽입·삭제</div>
@@ -327,8 +341,8 @@ figure.ph figcaption{font-size:12px;color:var(--tx2);padding:9px 12px}
 
 <div id="modal" class="hide"><div id="mBody"></div></div>
 <div id="toast"></div>
-<input type="file" id="fileP" accept="image/*" multiple hidden>
-<input type="file" id="fileQ" accept="image/*" multiple hidden>
+<input type="file" id="fileP" accept="image/*,video/*" multiple hidden>
+<input type="file" id="fileQ" accept="image/*,video/*" multiple hidden>
 <input type="file" id="fileI" accept="application/json,.json" hidden>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -337,8 +351,8 @@ figure.ph figcaption{font-size:12px;color:var(--tx2);padding:9px 12px}
 
 /* ═══════ 여기 두 줄만 본인 값으로 교체 ═══════
    Supabase 대시보드 → Project Settings → API */
-const SUPABASE_URL='https://zstgpnwnwmeifgmyeqtz.supabase.co';
-const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpzdGdwbndud21laWZnbXllcXR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM4ODg4MTUsImV4cCI6MjA5OTQ2NDgxNX0.Vop7u8Axa3dGKwvLfTr5YC1c8J0xo6dJ5q7ruR51ja4';
+const SUPABASE_URL='https://YOUR-PROJECT.supabase.co';
+const SUPABASE_ANON_KEY='YOUR-ANON-KEY';
 /* ═══════════════════════════════════════════ */
 
 const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
@@ -358,6 +372,9 @@ function dday(s){if(!S.set.startDate)return null;return Math.round((utc(s)-utc(S
 function ddayLabel(n){return n>0?'D+'+n:'D-'+(1-n)}
 function fmtDate(s){const d=parseYmd(s);return d.getFullYear()+'.'+pad(d.getMonth()+1)+'.'+pad(d.getDate())+' '+DOW[d.getDay()]}
 function fmtTime(ts){const d=new Date(ts);return pad(d.getHours())+':'+pad(d.getMinutes())}
+function fmtDur(s){if(!isFinite(s))return '0:00';s=Math.max(0,Math.floor(s));return Math.floor(s/60)+':'+pad(s%60)}
+function vidExt(t){t=t||'';if(t.indexOf('quicktime')>=0)return 'mov';if(t.indexOf('webm')>=0)return 'webm';return 'mp4'}
+function mediaName(b){return b.type==='video'?b.id+'.'+(b.ext||'mp4'):b.id+'.jpg'}
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c])}
 function grow(el){el.style.height='auto';el.style.height=el.scrollHeight+'px'}
 function dataURLtoBlob(u){const a=u.split(',');const bin=atob(a[1]);const arr=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);return new Blob([arr],{type:'image/jpeg'})}
@@ -418,7 +435,7 @@ async function saveEntry(e,withCreated){
     const payload={
       user_id:UID,entry_date:e.date,title:e.title||'',blocks:e.blocks,
       snippet:snippet(e),
-      photo_count:e.blocks.filter(b=>b.type==='photo').length,
+      photo_count:e.blocks.filter(b=>b.type==='photo'||b.type==='video').length,
       chat_count:e.blocks.filter(b=>b.type==='chat').length,
       updated_at:new Date(e.updatedAt||Date.now()).toISOString()
     };
@@ -437,15 +454,22 @@ async function uploadPhoto(id,dataURL){
     return !r.error;
   }catch(e){return false}
 }
-async function signPhoto(id){
+async function uploadVideo(id,ext,file){
   try{
-    const r=await sb.storage.from('diary-photos').createSignedUrl(UID+'/'+id+'.jpg',86400);
+    const r=await sb.storage.from('diary-photos')
+      .upload(UID+'/'+id+'.'+ext,file,{contentType:file.type||'video/mp4',upsert:true});
+    return !r.error;
+  }catch(e){return false}
+}
+async function signName(name){
+  try{
+    const r=await sb.storage.from('diary-photos').createSignedUrl(UID+'/'+name,86400);
     return r.data?r.data.signedUrl:null;
   }catch(e){return null}
 }
-async function removePhotoIds(ids){
-  if(!ids||!ids.length)return;
-  try{await sb.storage.from('diary-photos').remove(ids.map(id=>UID+'/'+id+'.jpg'))}catch(e){}
+async function removeMediaNames(names){
+  if(!names||!names.length)return;
+  try{await sb.storage.from('diary-photos').remove(names.map(n=>UID+'/'+n))}catch(e){}
 }
 async function downloadPhotoB64(id){
   try{
@@ -533,8 +557,8 @@ async function openEntry(ds){
   let isNew=false;
   if(!e){isNew=true;e={date:ds,title:'',createdAt:Date.now(),updatedAt:Date.now(),blocks:[{type:'text',text:'',ts:Date.now()}]}}
   S.cur=e;S.mode=isNew?'edit':'view';S.focus=-1;S.dirty=false;
-  const ids=e.blocks.filter(b=>b.type==='photo'&&!(b.id in PC)).map(b=>b.id);
-  await Promise.all(ids.map(async id=>{PC[id]=await signPhoto(id)}));
+  const meds=e.blocks.filter(b=>(b.type==='photo'||b.type==='video')&&!(b.id in PC));
+  await Promise.all(meds.map(async b=>{PC[b.id]=await signName(mediaName(b))}));
   renderEntry();
 }
 function renderEntry(){
@@ -593,16 +617,48 @@ function renderBlocks(){
       h+=edit
         ?'<div class="blk" data-i="'+i+'">'+T+'<figure class="ph">'+img+'</figure><input type="text" class="cap" data-i="'+i+'" placeholder="캡션 (선택)" value="'+esc(b.cap||'')+'"></div>'
         :'<div class="blk"><figure class="ph">'+img+(b.cap?'<figcaption>'+esc(b.cap)+'</figcaption>':'')+'</figure></div>';
+    }else if(b.type==='video'){
+      const src=PC[b.id];
+      const player=src
+        ?'<div class="vid"><video playsinline preload="metadata" src="'+src+'"></video>'
+          +'<div class="vctl"><button class="vplay">▶</button><span class="vtime">0:00</span>'
+          +'<input type="range" class="vseek" min="0" max="1000" value="0">'
+          +'<span class="vdur">0:00</span><button class="vmute">🔊</button>'
+          +'<input type="range" class="vvol" min="0" max="1" step="0.05" value="1"></div></div>'
+        :'<div class="phEmpty">영상을 불러올 수 없어요</div>';
+      h+=edit
+        ?'<div class="blk" data-i="'+i+'">'+T+player+'<input type="text" class="cap" data-i="'+i+'" placeholder="캡션 (선택)" value="'+esc(b.cap||'')+'"></div>'
+        :'<div class="blk">'+player+(b.cap?'<div class="vcap">'+esc(b.cap)+'</div>':'')+'</div>';
     }else if(b.type==='chat'){
       h+='<div class="blk" data-i="'+i+'">'+T
         +'<div class="chatbox" data-i="'+i+'"><div class="chatHd"><span class="l lat">Kakao Log · '+b.msgs.length+'</span></div>'
         +chatHtml(b.msgs,b.open?0:12)+'</div></div>';
     }
   });
-  if(edit)h+='<div class="inlineAdd"><button class="btn" data-add="text">＋ 글</button><button class="btn" data-add="photo">＋ 사진</button><button class="btn" data-add="chat">＋ 카톡</button></div>';
+  if(edit)h+='<div class="inlineAdd"><button class="btn" data-add="text">＋ 글</button><button class="btn" data-add="photo">＋ 사진·영상</button><button class="btn" data-add="chat">＋ 카톡</button></div>';
   if(!edit&&!h)h='<div class="loading">아직 내용이 없어요</div>';
   $('#blocks').innerHTML=h;
   if(edit)document.querySelectorAll('#blocks textarea').forEach(grow);
+  wireVideos();
+}
+function wireVideos(){
+  document.querySelectorAll('#blocks .vid').forEach(w=>{
+    if(w.dataset.wired)return;w.dataset.wired='1';
+    const v=w.querySelector('video'),play=w.querySelector('.vplay'),seek=w.querySelector('.vseek');
+    const tEl=w.querySelector('.vtime'),dEl=w.querySelector('.vdur'),mute=w.querySelector('.vmute'),vol=w.querySelector('.vvol');
+    const toggle=()=>{if(v.paused)v.play();else v.pause()};
+    play.onclick=toggle;
+    v.onclick=toggle;
+    v.onplay=()=>{play.textContent='❚❚'};
+    v.onpause=()=>{play.textContent='▶'};
+    v.onended=()=>{play.textContent='▶';v.currentTime=0};
+    v.onloadedmetadata=()=>{dEl.textContent=fmtDur(v.duration)};
+    v.ondurationchange=()=>{dEl.textContent=fmtDur(v.duration)};
+    v.ontimeupdate=()=>{tEl.textContent=fmtDur(v.currentTime);if(v.duration)seek.value=Math.round(v.currentTime/v.duration*1000)};
+    seek.oninput=()=>{if(v.duration)v.currentTime=seek.value/1000*v.duration};
+    mute.onclick=()=>{v.muted=!v.muted;mute.textContent=v.muted?'🔇':'🔊'};
+    vol.oninput=()=>{v.volume=+vol.value;v.muted=(+vol.value===0);mute.textContent=v.muted?'🔇':'🔊'};
+  });
 }
 
 /* block events */
@@ -641,12 +697,12 @@ $('#blocks').addEventListener('click',e=>{
     const b=arr[i];
     const doDel=()=>{
       arr.splice(i,1);
-      if(b.type==='photo'){delete PC[b.id];removePhotoIds([b.id])}
+      if(b.type==='photo'||b.type==='video'){delete PC[b.id];removeMediaNames([mediaName(b)])}
       if(!arr.length)arr.push({type:'text',text:'',ts:Date.now()});
       S.focus=-1;touch();renderBlocks();
     };
     if(b.type==='text'&&!b.text.trim())doDel();
-    else confirmM(b.type==='photo'?'이 사진을 지울까요?':b.type==='chat'?'이 대화 기록을 지울까요?':'이 문단을 지울까요?',doDel);
+    else confirmM(b.type==='photo'?'이 사진을 지울까요?':b.type==='video'?'이 영상을 지울까요?':b.type==='chat'?'이 대화 기록을 지울까요?':'이 문단을 지울까요?',doDel);
   }
 });
 function markFocus(){
@@ -664,9 +720,9 @@ $('#eDel').onclick=()=>{
   const e=S.cur;if(!e)return;
   confirmM(fmtDate(e.date)+' 일기를 완전히 삭제할까요?',async()=>{
     S.dirty=false;clearTimeout(saveTimer);
-    const ids=e.blocks.filter(b=>b.type==='photo').map(b=>b.id);
-    ids.forEach(id=>delete PC[id]);
-    await removePhotoIds(ids);
+    const meds=e.blocks.filter(b=>b.type==='photo'||b.type==='video');
+    meds.forEach(b=>delete PC[b.id]);
+    await removeMediaNames(meds.map(mediaName));
     await deleteEntryRow(e.date);
     S.idx=S.idx.filter(o=>o.d!==e.date);
     S.cur=null;show('cal');renderCal();renderRecent();toast('삭제됐어요');
@@ -700,6 +756,7 @@ function snippet(e){
   const t=e.blocks.find(b=>b.type==='text'&&b.text.trim());
   if(t)return t.text.trim().replace(/\s+/g,' ').slice(0,42);
   if(e.blocks.some(b=>b.type==='photo'))return '사진 기록';
+  if(e.blocks.some(b=>b.type==='video'))return '영상 기록';
   if(e.blocks.some(b=>b.type==='chat'))return '대화 기록';
   return '';
 }
@@ -709,7 +766,7 @@ function updateIndexLocal(e){
   if(isEmpty(e)){
     if(i>=0)S.idx.splice(i,1);
   }else{
-    const row={d:e.date,s:snippet(e),p:e.blocks.filter(b=>b.type==='photo').length,c:e.blocks.filter(b=>b.type==='chat').length};
+    const row={d:e.date,s:snippet(e),p:e.blocks.filter(b=>b.type==='photo'||b.type==='video').length,c:e.blocks.filter(b=>b.type==='chat').length};
     if(i>=0)S.idx[i]=row;else S.idx.push(row);
     S.idx.sort((a,b)=>a.d<b.d?1:-1);
   }
@@ -730,19 +787,31 @@ $('#addText').onclick=()=>doAddText(insertPos());
 $('#addPhoto').onclick=()=>doAddPhoto(insertPos());
 $('#fileP').addEventListener('change',async e=>{
   const files=[...e.target.files];if(!files.length)return;
-  toast('사진 처리 중…');
+  toast('처리 중…');
   let p=photoPos;
   for(const f of files){
     try{
-      const data=await compress(f);
-      if(!data){toast('사진이 너무 커요: '+f.name);continue}
-      const id='p'+Date.now()+Math.random().toString(36).slice(2,7);
-      const ok=await uploadPhoto(id,data);
-      if(!ok){toast('사진 업로드 실패 — 네트워크 확인');continue}
-      PC[id]=data;
-      S.cur.blocks.splice(p,0,{type:'photo',id:id,cap:'',ts:Date.now()});
-      S.focus=p;p++;
-    }catch(err){toast('사진 추가 실패')}
+      if(f.type&&f.type.indexOf('video')===0){
+        if(f.size>52428800){toast('영상은 50MB 이하만 올릴 수 있어요: '+f.name);continue}
+        const id='v'+Date.now()+Math.random().toString(36).slice(2,7);
+        const ext=vidExt(f.type);
+        toast('영상 업로드 중… (용량에 따라 시간이 걸려요)');
+        const ok=await uploadVideo(id,ext,f);
+        if(!ok){toast('영상 업로드 실패 — 네트워크 확인');continue}
+        PC[id]=URL.createObjectURL(f);
+        S.cur.blocks.splice(p,0,{type:'video',id:id,ext:ext,cap:'',ts:Date.now()});
+        S.focus=p;p++;
+      }else{
+        const data=await compress(f);
+        if(!data){toast('사진이 너무 커요: '+f.name);continue}
+        const id='p'+Date.now()+Math.random().toString(36).slice(2,7);
+        const ok=await uploadPhoto(id,data);
+        if(!ok){toast('사진 업로드 실패 — 네트워크 확인');continue}
+        PC[id]=data;
+        S.cur.blocks.splice(p,0,{type:'photo',id:id,cap:'',ts:Date.now()});
+        S.focus=p;p++;
+      }
+    }catch(err){toast('추가 실패')}
   }
   touch();renderBlocks();
 });
@@ -825,19 +894,27 @@ let qTarget='h';
 function qPick(pfx){qTarget=pfx;$('#fileQ').value='';$('#fileQ').click()}
 $('#fileQ').addEventListener('change',async e=>{
   const files=[...e.target.files];if(!files.length)return;
-  toast('사진 처리 중…');
+  toast('처리 중…');
   for(const f of files){
     try{
-      const src=await compress(f);
-      if(!src){toast('사진이 너무 커요: '+f.name);continue}
-      QP[qTarget].push({id:'p'+Date.now()+Math.random().toString(36).slice(2,7),src:src});
-    }catch(err){toast('사진 추가 실패')}
+      if(f.type&&f.type.indexOf('video')===0){
+        if(f.size>52428800){toast('영상은 50MB 이하만 올릴 수 있어요: '+f.name);continue}
+        QP[qTarget].push({id:'v'+Date.now()+Math.random().toString(36).slice(2,7),kind:'v',file:f,ext:vidExt(f.type)});
+      }else{
+        const src=await compress(f);
+        if(!src){toast('사진이 너무 커요: '+f.name);continue}
+        QP[qTarget].push({id:'p'+Date.now()+Math.random().toString(36).slice(2,7),kind:'p',src:src});
+      }
+    }catch(err){toast('첨부 실패')}
   }
   renderQThumbs(qTarget);
 });
 function renderQThumbs(pfx){
   const el=$('#'+pfx+'Qthumbs');
-  el.innerHTML=QP[pfx].map((s,i)=>'<div class="qth"><img src="'+s.src+'" alt=""><button data-qx="'+pfx+':'+i+'">✕</button></div>').join('');
+  el.innerHTML=QP[pfx].map((s,i)=>{
+    const inner=s.kind==='v'?'🎬':'<img src="'+s.src+'" alt="">';
+    return '<div class="qth'+(s.kind==='v'?' qthv':'')+'">'+inner+'<button data-qx="'+pfx+':'+i+'">✕</button></div>';
+  }).join('');
   el.classList.toggle('hide',!QP[pfx].length);
 }
 document.addEventListener('click',e=>{
@@ -859,10 +936,18 @@ async function qSubmit(pfx){
   if(en.blocks.length===1&&en.blocks[0].type==='text'&&!en.blocks[0].text.trim())en.blocks=[];
   toast('기록 중…');
   for(const s of shots){
-    const ok=await uploadPhoto(s.id,s.src);
-    if(!ok){toast('사진 업로드 실패 — 네트워크 확인 후 다시 시도해 주세요');return}
-    PC[s.id]=s.src;
-    en.blocks.push({type:'photo',id:s.id,cap:'',ts:ts});
+    let ok;
+    if(s.kind==='v'){
+      ok=await uploadVideo(s.id,s.ext,s.file);
+      if(ok)PC[s.id]=URL.createObjectURL(s.file);
+    }else{
+      ok=await uploadPhoto(s.id,s.src);
+      if(ok)PC[s.id]=s.src;
+    }
+    if(!ok){toast('업로드 실패 — 네트워크 확인 후 다시 시도해 주세요');return}
+    en.blocks.push(s.kind==='v'
+      ?{type:'video',id:s.id,ext:s.ext,cap:'',ts:ts}
+      :{type:'photo',id:s.id,cap:'',ts:ts});
   }
   if(tx)en.blocks.push({type:'text',text:tx,ts:ts});
   en.updatedAt=ts;
