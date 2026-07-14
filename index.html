@@ -208,13 +208,16 @@ figure.ph figcaption{font-size:12px;color:var(--tx2);padding:9px 12px}
 .chatbox{background:var(--ink2);border:1px solid var(--line);border-radius:14px;padding:12px}
 .chatHd{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
 .chatHd .l{font-size:10px;color:var(--tx3);letter-spacing:.24em;font-weight:700}
-.msg{display:flex;flex-direction:column;align-items:flex-start;margin-bottom:7px}
+.msg{display:flex;flex-direction:column;align-items:flex-start;margin-bottom:2px}
+.msg.gend{margin-bottom:12px}
 .msg.me{align-items:flex-end}
-.mname{font-size:10.5px;color:var(--tx3);margin:4px 0 3px 4px}
+.mname{font-size:10.5px;color:var(--tx3);margin:10px 0 4px 4px}
 .mrow{display:flex;align-items:flex-end;gap:6px;max-width:88%}
 .msg.me .mrow{flex-direction:row-reverse}
-.mb{background:#22252b;border:1px solid var(--line);padding:7px 11px;border-radius:4px 13px 13px 13px;font-size:13.5px;white-space:pre-wrap;word-break:break-word}
-.msg.me .mb{background:linear-gradient(180deg,#e8eaef,#c6cbd4);color:#14161a;border-color:#dfe2e8;border-radius:13px 4px 13px 13px}
+.mb{background:#22252b;border:1px solid var(--line);padding:7px 11px;border-radius:13px 13px 13px 4px;font-size:13.5px;white-space:pre-wrap;word-break:break-word}
+.msg.gend .mb{border-radius:4px 13px 13px 13px}
+.msg.me .mb{background:linear-gradient(180deg,#e8eaef,#c6cbd4);color:#14161a;border-color:#dfe2e8;border-radius:13px 13px 4px 13px}
+.msg.me.gend .mb{border-radius:13px 4px 13px 13px}
 .mt{font-size:9.5px;color:var(--tx3);white-space:nowrap}
 .chatMore{text-align:center;font-size:11px;color:var(--tx3);padding:6px 0 0}
 
@@ -690,10 +693,17 @@ function toolsHtml(i,n){
 function chatHtml(msgs,limit){
   const list=limit?msgs.slice(0,limit):msgs;
   let h='',prev=null;
-  for(const m of list){
+  for(let i=0;i<list.length;i++){
+    const m=list[i];
     const me=!!m.me;
+    const nx=list[i+1];
+    // 다음 메시지가 없거나, 화자가 바뀌거나, 시간(분)이 바뀌면 이 말풍선이 묶음의 끝
+    const last=!nx||nx.n!==m.n||!!nx.me!==me||(nx.t||'')!==(m.t||'');
     if(!me&&m.n!==prev)h+='<div class="mname">'+esc(m.n)+'</div>';
-    h+='<div class="msg'+(me?' me':'')+'"><div class="mrow"><div class="mb">'+esc(m.x)+'</div><span class="mt">'+esc(m.t||'')+'</span></div></div>';
+    h+='<div class="msg'+(me?' me':'')+(last?' gend':'')+'">'
+      +'<div class="mrow"><div class="mb">'+esc(m.x)+'</div>'
+      +(last&&m.t?'<span class="mt">'+esc(m.t)+'</span>':'')
+      +'</div></div>';
     prev=m.n;
   }
   if(limit&&msgs.length>limit)h+='<div class="chatMore" data-act="more">… '+(msgs.length-limit)+'개 더 보기</div>';
