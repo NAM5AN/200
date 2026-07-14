@@ -1174,6 +1174,7 @@ function openChatModal(){
     +'<div class="fh" style="margin-bottom:10px">내보내기 파일 내용, PC에서 복사한 대화, 일반 텍스트(이름: 내용)까지 전부 붙여넣기 돼요.</div>'
     +'<textarea id="chatRaw" style="min-height:150px" placeholder="여기에 붙여넣기…"></textarea>'
     +'<button class="btn" id="chatOcr" style="width:100%;margin-top:10px">📷 스크린샷에서 대화 추출 (최대 5장)</button>'
+    +'<div class="fh" style="margin-top:6px">파일 선택 또는 캡처 이미지를 여기에 붙여넣기(Ctrl+V)해도 추출돼요.</div>'
     +'<div class="chkRow"><input type="checkbox" id="chatOnlyDate" checked><label for="chatOnlyDate">이 일기 날짜('+fmtDate(S.cur.date)+')의 메시지만 가져오기</label></div>'
     +'<div class="frow" style="margin:12px 0 0"><div class="fl">내 카톡 대화명 (내 말풍선 구분용)</div><input type="text" id="chatMe" placeholder="예: 수정" value="'+esc(S.set.myName||'')+'"></div>'
     +'<div class="frow" style="margin:12px 0 0"><div class="fl">기본 시간 (선택) — 시간 정보가 없는 메시지에 표시돼요</div><input type="text" id="chatTime" placeholder="예: 오후 9:30"></div>'
@@ -1402,6 +1403,12 @@ document.addEventListener('paste',async e=>{
   }
   if(!imgs.length)return; // 텍스트 붙여넣기는 그대로 통과
   e.preventDefault();
+  // 카톡 대화 모달이 열려 있으면: 붙여넣은 스크린샷을 OCR로
+  const modalOpen=!$('#modal').classList.contains('hide');
+  if(modalOpen&&$('#chatOcr')){
+    await runOcr(imgs);
+    return;
+  }
   // 편집 모드: 포커스한 블록 아래에 바로 삽입
   if(S.cur&&S.mode==='edit'){
     await addFilesToEntry(imgs,insertPos());
@@ -1580,12 +1587,14 @@ async function compressOcr(file){
 }
 $('#fileO').addEventListener('change',async e=>{
   const files=[...e.target.files].slice(0,5);
-  if(!files.length)return;
+  if(files.length)await runOcr(files);
+});
+async function runOcr(files){
   const btn=$('#chatOcr');
   if(btn){btn.disabled=true;btn.textContent='📷 추출 중… (장당 5~10초)'}
   try{
     const images=[];
-    for(const f of files){
+    for(const f of files.slice(0,5)){
       const d=await compressOcr(f);
       if(d)images.push(d);
     }
@@ -1599,7 +1608,7 @@ $('#fileO').addEventListener('change',async e=>{
     toast('추출 실패 — kakao-ocr 함수 배포와 OPENAI_API_KEY 설정을 확인해 주세요');
   }
   if(btn){btn.disabled=false;btn.textContent='📷 스크린샷에서 대화 추출 (최대 5장)'}
-});
+}
 
 /* ── settings ── */
 function openSettings(){
