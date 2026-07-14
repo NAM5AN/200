@@ -708,7 +708,7 @@ function chatHtml(msgs,limit,ctx){
     // 다음과 화자/시간이 다르면 이 말풍선이 묶음의 끝
     const last=!nx||nx.n!==m.n||!!nx.me!==me||(nx.t||'')!==(m.t||'');
     if(!me&&first)h+='<div class="mname">'+esc(m.n)+'</div>';
-    const acts=ctx?'<span class="mact"><button data-medit="'+ctx+':'+i+'" title="편집">✎</button><button data-mdel="'+ctx+':'+i+'" title="삭제">🗑</button></span>':'';
+    const acts=(ctx!=null)?'<span class="mact"><button data-medit="'+ctx+':'+i+'" title="편집">✎</button><button data-mdel="'+ctx+':'+i+'" title="삭제">🗑</button></span>':'';
     h+='<div class="msg'+(me?' me':'')+(last?' gend':'')+'">'
       +'<div class="mrow"><div class="mb">'+esc(m.x)+'</div>'
       +acts
