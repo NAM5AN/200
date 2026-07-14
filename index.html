@@ -187,7 +187,6 @@ figure.ph figcaption{font-size:12px;color:var(--tx2);padding:9px 12px}
 .csDay{position:sticky;top:0;text-align:center;margin:6px 0 12px;z-index:1}
 .csDay span{font-size:10px;letter-spacing:.14em;color:var(--tx2);background:var(--card2);border:1px solid var(--line);border-radius:999px;padding:4px 12px}
 .csGrp{margin-bottom:20px}
-.csGT{display:flex;justify-content:flex-end;gap:6px;margin-bottom:8px}
 .csEmpty{text-align:center;color:var(--tx3);font-size:13px;padding:40px 20px;line-height:1.8}
 
 /* bgm */
@@ -212,13 +211,19 @@ figure.ph figcaption{font-size:12px;color:var(--tx2);padding:9px 12px}
 .msg.gend{margin-bottom:12px}
 .msg.me{align-items:flex-end}
 .mname{font-size:10.5px;color:var(--tx3);margin:8px 0 4px 4px}
-.mrow{display:flex;align-items:flex-end;gap:6px;max-width:88%}
+.mrow{display:flex;align-items:flex-end;gap:6px;max-width:96%}
+.mrow .mb{max-width:340px}
 .msg.me .mrow{flex-direction:row-reverse}
 .mb{background:#22252b;border:1px solid var(--line);padding:7px 11px;border-radius:13px 13px 13px 4px;font-size:13.5px;white-space:pre-wrap;word-break:break-word}
 .msg.gend .mb{border-radius:4px 13px 13px 13px}
 .msg.me .mb{background:linear-gradient(180deg,#e8eaef,#c6cbd4);color:#14161a;border-color:#dfe2e8;border-radius:13px 13px 4px 13px}
 .msg.me.gend .mb{border-radius:13px 4px 13px 13px}
 .mt{font-size:9.5px;color:var(--tx3);white-space:nowrap}
+.mact{display:flex;gap:2px;align-self:center;opacity:0;transition:opacity .12s;flex:none}
+.mrow:hover .mact{opacity:1}
+.mact button{appearance:none;background:var(--card2);border:1px solid var(--line2);color:var(--tx2);width:24px;height:24px;border-radius:7px;font-size:11px;cursor:pointer;padding:0;line-height:1;display:flex;align-items:center;justify-content:center}
+.mact button:active{color:var(--tx)}
+@media (hover:none){.mact{opacity:.65}}
 .chatMore{text-align:center;font-size:11px;color:var(--tx3);padding:6px 0 0}
 
 /* add bar */
@@ -240,7 +245,7 @@ figure.ph figcaption{font-size:12px;color:var(--tx2);padding:9px 12px}
 .setBtns{display:flex;flex-direction:column;gap:9px;margin-top:6px}
 
 /* modal / toast / loader */
-#modal{position:fixed;inset:0;z-index:50;background:rgba(5,6,8,.72);display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(3px)}
+#modal{position:fixed;inset:0;z-index:80;background:rgba(5,6,8,.72);display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(3px)}
 #mBody{width:100%;max-width:520px;background:var(--card);border:1px solid var(--line2);border-radius:18px 18px 0 0;padding:20px 18px calc(20px + env(safe-area-inset-bottom));max-height:86vh;overflow:auto}
 .mTitle{font-size:15px;font-weight:800;margin-bottom:12px}
 .mrowBtn{display:flex;gap:8px;margin-top:16px}
@@ -251,7 +256,7 @@ figure.ph figcaption{font-size:12px;color:var(--tx2);padding:9px 12px}
 #toast{
   position:fixed;left:50%;bottom:calc(86px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(8px);
   background:#e8eaef;color:#14161a;font-size:12.5px;font-weight:700;padding:9px 16px;border-radius:999px;
-  opacity:0;pointer-events:none;transition:.2s;z-index:60;white-space:nowrap;max-width:92vw;overflow:hidden;text-overflow:ellipsis;
+  opacity:0;pointer-events:none;transition:.2s;z-index:90;white-space:nowrap;max-width:92vw;overflow:hidden;text-overflow:ellipsis;
 }
 #toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
 #loader{padding:70px 0;text-align:center;color:var(--tx3);font-size:12px;letter-spacing:.3em}
@@ -690,7 +695,7 @@ function toolsHtml(i,n){
     +'<button data-act="ins" data-i="'+i+'">＋</button>'
     +'<button data-act="del" data-i="'+i+'">✕</button></div>';
 }
-function chatHtml(msgs,limit){
+function chatHtml(msgs,limit,ctx){
   const list=limit?msgs.slice(0,limit):msgs;
   let h='';
   for(let i=0;i<list.length;i++){
@@ -703,8 +708,10 @@ function chatHtml(msgs,limit){
     // 다음과 화자/시간이 다르면 이 말풍선이 묶음의 끝
     const last=!nx||nx.n!==m.n||!!nx.me!==me||(nx.t||'')!==(m.t||'');
     if(!me&&first)h+='<div class="mname">'+esc(m.n)+'</div>';
+    const acts=ctx?'<span class="mact"><button data-medit="'+ctx+':'+i+'" title="편집">✎</button><button data-mdel="'+ctx+':'+i+'" title="삭제">🗑</button></span>':'';
     h+='<div class="msg'+(me?' me':'')+(last?' gend':'')+'">'
       +'<div class="mrow"><div class="mb">'+esc(m.x)+'</div>'
+      +acts
       +(last&&m.t?'<span class="mt">'+esc(m.t)+'</span>':'')
       +'</div></div>';
   }
@@ -1297,19 +1304,12 @@ function renderChatSheet(){
   }else{
     let h='';
     chats.forEach((c,ci)=>{
-      h+='<div class="csGrp">'
-        +(edit?'<div class="csGT"><button class="btn sm ghost" data-cedit="'+ci+'">✎ 편집</button><button class="btn sm ghost" data-cdel="'+ci+'">🗑 삭제</button></div>':'')
-        +chatHtml(c.msgs||[],0)+'</div>';
+      h+='<div class="csGrp">'+chatHtml(c.msgs||[],0,edit?ci:null)+'</div>';
     });
     box.innerHTML=h;
     if(edit){
-      box.querySelectorAll('[data-cedit]').forEach(b=>b.onclick=()=>editChatGroup(+b.dataset.cedit));
-      box.querySelectorAll('[data-cdel]').forEach(b=>b.onclick=()=>{
-        confirmM('이 대화 묶음을 지울까요?',()=>{
-          S.cur.chats.splice(+b.dataset.cdel,1);
-          touch();renderChatSheet();renderChatBtn();
-        });
-      });
+      box.querySelectorAll('[data-medit]').forEach(b=>b.onclick=()=>{const a=b.dataset.medit.split(':');editMsg(+a[0],+a[1])});
+      box.querySelectorAll('[data-mdel]').forEach(b=>b.onclick=()=>{const a=b.dataset.mdel.split(':');delMsg(+a[0],+a[1])});
     }
   }
   const foot=$('#csFoot');
@@ -1323,38 +1323,34 @@ function renderChatSheet(){
     foot.innerHTML='<div class="fh" style="text-align:center">대화를 수정하려면 상단 [편집]에서 열어주세요</div>';
   }
 }
-function msgsToText(msgs){
-  return (msgs||[]).map(m=>{
-    const nm=m.me?'나':(m.n||'상대');
-    return (m.t?m.t+' ':'')+nm+': '+m.x;
-  }).join('\n');
+function delMsg(ci,mi){
+  const c=S.cur.chats[ci];if(!c||!c.msgs)return;
+  c.msgs.splice(mi,1);
+  if(!c.msgs.length)S.cur.chats.splice(ci,1);
+  touch();renderChatSheet();renderChatBtn();
 }
-function editChatGroup(ci){
-  const c=S.cur.chats[ci];if(!c)return;
+function editMsg(ci,mi){
+  const c=S.cur.chats[ci];if(!c||!c.msgs)return;
+  const m=c.msgs[mi];
   modal(
-    '<div class="mTitle">대화 편집</div>'
-    +'<div class="fh" style="margin-bottom:10px">한 줄에 하나씩. 형식: <b>시간 이름: 내용</b> (시간은 생략 가능). 내 메시지는 이름을 "나"로.</div>'
-    +'<textarea id="ceRaw" style="min-height:220px">'+esc(msgsToText(c.msgs))+'</textarea>'
-    +'<div class="frow" style="margin:12px 0 0"><div class="fl">내 카톡 대화명</div><input type="text" id="ceMe" value="'+esc(S.set.myName||'')+'" placeholder="예: 수정"></div>'
-    +'<div class="mrowBtn"><button class="btn" id="ceCancel">취소</button><button class="btn pri" id="ceOk">저장</button></div>'
+    '<div class="mTitle">메시지 편집</div>'
+    +'<div class="frow"><div class="fl">보낸 사람</div><input type="text" id="emName" value="'+esc(m.me?'나':(m.n||''))+'" placeholder="이름 (내 메시지는 나)"></div>'
+    +'<div class="frow"><div class="fl">시간 (선택)</div><input type="text" id="emTime" value="'+esc(m.t||'')+'" placeholder="예: 오전 3:04"></div>'
+    +'<div class="frow"><div class="fl">내용</div><textarea id="emText" style="min-height:90px">'+esc(m.x||'')+'</textarea></div>'
+    +'<div class="mrowBtn"><button class="btn" id="emCancel">취소</button><button class="btn pri" id="emOk">저장</button></div>'
   );
-  $('#ceCancel').onclick=closeModal;
-  $('#ceOk').onclick=()=>{
-    const raw=$('#ceRaw').value;
-    let msgs=parseKakao(raw);
-    if(!msgs.length&&raw.trim())msgs=parseFree(raw);
-    if(!msgs.length){
-      confirmM('내용이 비었어요. 이 대화 묶음을 삭제할까요?',()=>{
-        S.cur.chats.splice(ci,1);closeModal();touch();renderChatSheet();renderChatBtn();
-      });
-      return;
-    }
-    const me=$('#ceMe').value.trim();
-    if(me!==S.set.myName){S.set.myName=me;saveSettings();renderHeader()}
-    const list=msgs.map(m=>({n:m.name,t:m.time,x:m.text,me:(m.name.trim()==='나')||(!!me&&m.name.trim()===me)}));
-    S.cur.chats[ci]={msgs:list,ts:c.ts||Date.now()};
+  $('#emCancel').onclick=closeModal;
+  $('#emOk').onclick=()=>{
+    const nm=$('#emName').value.trim();
+    const tx=$('#emText').value;
+    if(!tx.trim()){toast('내용을 입력해 주세요');return}
+    const me=(S.set.myName||'').trim();
+    m.n=nm||'상대';
+    m.t=$('#emTime').value.trim();
+    m.x=tx;
+    m.me=(nm==='나')||(!!me&&nm===me);
     closeModal();touch();renderChatSheet();renderChatBtn();
-    toast('대화를 수정했어요');
+    toast('메시지를 수정했어요');
   };
 }
 function openChatSheet(){
