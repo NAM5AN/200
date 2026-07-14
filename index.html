@@ -401,6 +401,7 @@ figure.ph figcaption{font-size:12px;color:var(--tx2);padding:9px 12px}
 <input type="file" id="fileP" accept="image/*,video/*" multiple hidden>
 <input type="file" id="fileQ" accept="image/*,video/*" multiple hidden>
 <input type="file" id="fileB" accept="audio/*" hidden>
+<input type="file" id="fileO" accept="image/*" multiple hidden>
 <input type="file" id="fileI" accept="application/json,.json" hidden>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1099,34 +1100,38 @@ $('#addChat').onclick=()=>doAddChat(insertPos());
 function openChatModal(){
   modal(
     '<div class="mTitle">카톡 대화 불러오기</div>'
-    +'<div class="fh" style="margin-bottom:10px">카톡 대화방 → 메뉴(≡) → 대화 내용 내보내기(텍스트만) → 파일을 열어 전체 복사 후 아래에 붙여넣으세요.</div>'
+    +'<div class="fh" style="margin-bottom:10px">내보내기 파일 내용, PC에서 복사한 대화, 일반 텍스트(이름: 내용)까지 전부 붙여넣기 돼요.</div>'
     +'<textarea id="chatRaw" style="min-height:150px" placeholder="여기에 붙여넣기…"></textarea>'
+    +'<button class="btn" id="chatOcr" style="width:100%;margin-top:10px">📷 스크린샷에서 대화 추출 (최대 5장)</button>'
     +'<div class="chkRow"><input type="checkbox" id="chatOnlyDate" checked><label for="chatOnlyDate">이 일기 날짜('+fmtDate(S.cur.date)+')의 메시지만 가져오기</label></div>'
     +'<div class="frow" style="margin:12px 0 0"><div class="fl">내 카톡 대화명 (내 말풍선 구분용)</div><input type="text" id="chatMe" placeholder="예: 수정" value="'+esc(S.set.myName||'')+'"></div>'
     +'<div class="mrowBtn"><button class="btn" id="chatCancel">취소</button><button class="btn pri" id="chatOk">추가</button></div>'
   );
   $('#chatCancel').onclick=closeModal;
+  $('#chatOcr').onclick=()=>{$('#fileO').value='';$('#fileO').click()};
   $('#chatOk').onclick=()=>{
     const raw=$('#chatRaw').value;
     const only=$('#chatOnlyDate').checked;
     let msgs=parseKakao(raw);
+    let free=false;
+    if(!msgs.length&&raw.trim()){msgs=parseFree(raw);free=true}
     if(only)msgs=msgs.filter(m=>!m.date||m.date===S.cur.date);
     if(!msgs.length){toast('불러올 메시지를 찾지 못했어요');return}
     if(msgs.length>1500){msgs=msgs.slice(0,1500);toast('메시지가 많아 1500개까지만 가져왔어요')}
     const me=$('#chatMe').value.trim();
     if(me!==S.set.myName){S.set.myName=me;saveSettings();renderHeader()}
-    const list=msgs.map(m=>({n:m.name,t:m.time,x:m.text,me:!!me&&m.name.trim()===me}));
+    const list=msgs.map(m=>({n:m.name,t:m.time,x:m.text,me:(m.name.trim()==='나')||(!!me&&m.name.trim()===me)}));
     const p=chatPos;
     S.cur.blocks.splice(p,0,{type:'chat',msgs:list,open:false,ts:Date.now()});
     S.focus=p;touch();renderBlocks();closeModal();
-    toast(list.length+'개 메시지를 가져왔어요');
+    toast(list.length+'개 메시지를 가져왔어요'+(free?' (자유 텍스트 인식)':''));
   };
 }
 function parseKakao(raw){
   const msgs=[];let curDate=null;
   const reHdr=/(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일/;
   const reA=/^(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\.?\s*(오전|오후)?\s*(\d{1,2}):(\d{2}),\s*(.+?)\s*:\s*([\s\S]*)$/;
-  const reB=/^\[([^\]]+)\]\s*\[(오전|오후)?\s*(\d{1,2}):(\d{2})\]\s*([\s\S]*)$/;
+  const reB=/^\[([^\]]+)\]\s*\[([^\]]*)\]\s*([\s\S]*)$/;
   const reC=/^"?(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2}):\d{2}"?\s*,\s*"?([^",]+)"?\s*,\s*"?([\s\S]*?)"?$/;
   const t12=(ap,h,mm)=>(ap?ap+' ':'')+h+':'+mm;
   for(const line of raw.split(/\r?\n/)){
@@ -1138,7 +1143,7 @@ function parseKakao(raw){
       curDate=m[1]+'-'+m[2]+'-'+m[3];
       msgs.push({date:curDate,time:m[4]+':'+m[5],name:m[6].trim(),text:m[7]});
     }else if((m=line.match(reB))){
-      msgs.push({date:curDate,time:t12(m[2],m[3],m[4]),name:m[1].trim(),text:m[5]});
+      msgs.push({date:curDate,time:m[2].trim(),name:m[1].trim(),text:m[3]});
     }else if((m=line.match(reHdr))){
       curDate=m[1]+'-'+pad(+m[2])+'-'+pad(+m[3]);
     }else if(line.trim()&&msgs.length){
@@ -1146,6 +1151,23 @@ function parseKakao(raw){
     }
   }
   return msgs.filter(m=>m.text&&m.text.trim());
+}
+function parseFree(raw){
+  const msgs=[];
+  const reNT=/^(.{1,20}?)\s*[:：]\s*(.+)$/;
+  for(const line of raw.split(/\r?\n/)){
+    const t=line.trim();
+    if(!t)continue;
+    const m=t.match(reNT);
+    if(m&&!/^https?$/i.test(m[1].trim())&&!/^\d{1,2}$/.test(m[1].trim())){
+      msgs.push({date:null,time:'',name:m[1].trim(),text:m[2]});
+    }else if(msgs.length){
+      msgs[msgs.length-1].text+='\n'+t;
+    }else{
+      msgs.push({date:null,time:'',name:(S.set.partnerName||'상대'),text:t});
+    }
+  }
+  return msgs;
 }
 
 /* ── quick capture ── */
@@ -1396,6 +1418,45 @@ $('#fileB').addEventListener('change',async e=>{
   touch();closeModal();
   $('#bgmBox').dataset.k='';renderBgm();
   toast('BGM 설정 완료 🎵 보기 화면에서 자동재생돼요');
+});
+
+async function compressOcr(file){
+  const src=await readFile(file);
+  const img=await loadImg(src);
+  let q=0.82,max=1600;
+  for(let t=0;t<3;t++){
+    const sc=Math.min(1,max/Math.max(img.width,img.height));
+    const c=document.createElement('canvas');
+    c.width=Math.max(1,Math.round(img.width*sc));
+    c.height=Math.max(1,Math.round(img.height*sc));
+    c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+    const out=c.toDataURL('image/jpeg',q);
+    if(out.length<1800000)return out;
+    max*=0.8;q=Math.max(0.6,q-0.1);
+  }
+  return null;
+}
+$('#fileO').addEventListener('change',async e=>{
+  const files=[...e.target.files].slice(0,5);
+  if(!files.length)return;
+  const btn=$('#chatOcr');
+  if(btn){btn.disabled=true;btn.textContent='📷 추출 중… (장당 5~10초)'}
+  try{
+    const images=[];
+    for(const f of files){
+      const d=await compressOcr(f);
+      if(d)images.push(d);
+    }
+    if(!images.length)throw new Error('img');
+    const r=await sb.functions.invoke('kakao-ocr',{body:{images:images}});
+    if(r.error||!r.data||!r.data.text)throw new Error(r.error?String(r.error.message||r.error):'empty');
+    const ta=$('#chatRaw');
+    if(ta)ta.value=(ta.value?ta.value+'\n':'')+r.data.text;
+    toast('추출 완료 — 내용 확인 후 [추가]를 누르세요');
+  }catch(err){
+    toast('추출 실패 — kakao-ocr 함수 배포와 OPENAI_API_KEY 설정을 확인해 주세요');
+  }
+  if(btn){btn.disabled=false;btn.textContent='📷 스크린샷에서 대화 추출 (최대 5장)'}
 });
 
 /* ── settings ── */
