@@ -187,7 +187,7 @@ figure.ph figcaption{font-size:12px;color:var(--tx2);padding:9px 12px}
 .csDay{position:sticky;top:0;text-align:center;margin:6px 0 12px;z-index:1}
 .csDay span{font-size:10px;letter-spacing:.14em;color:var(--tx2);background:var(--card2);border:1px solid var(--line);border-radius:999px;padding:4px 12px}
 .csGrp{margin-bottom:20px}
-.csGL{font-size:9px;color:var(--tx3);letter-spacing:.2em;margin-bottom:8px;text-align:center}
+.csGT{display:flex;justify-content:flex-end;gap:6px;margin-bottom:8px}
 .csEmpty{text-align:center;color:var(--tx3);font-size:13px;padding:40px 20px;line-height:1.8}
 
 /* bgm */
@@ -1291,19 +1291,29 @@ function renderChatSheet(){
   const box=$('#csBody');
   $('#csTitle').textContent='💬 '+fmtDate(e.date)+' 대화';
   const chats=Array.isArray(e.chats)?e.chats:[];
+  const edit=S.mode==='edit';
   if(!chats.length){
     box.innerHTML='<div class="csEmpty">아직 저장된 대화가 없어요.<br>아래 버튼으로 그날 나눈 카톡을 붙여넣어 보관하세요.</div>';
   }else{
     let h='';
-    chats.forEach(c=>{
+    chats.forEach((c,ci)=>{
       h+='<div class="csGrp">'
-        +(c.ts?'<div class="csGL lat">'+fmtTime(c.ts)+' 저장</div>':'')
+        +(edit?'<div class="csGT"><button class="btn sm ghost" data-cedit="'+ci+'">✎ 편집</button><button class="btn sm ghost" data-cdel="'+ci+'">🗑 삭제</button></div>':'')
         +chatHtml(c.msgs||[],0)+'</div>';
     });
     box.innerHTML=h;
+    if(edit){
+      box.querySelectorAll('[data-cedit]').forEach(b=>b.onclick=()=>editChatGroup(+b.dataset.cedit));
+      box.querySelectorAll('[data-cdel]').forEach(b=>b.onclick=()=>{
+        confirmM('이 대화 묶음을 지울까요?',()=>{
+          S.cur.chats.splice(+b.dataset.cdel,1);
+          touch();renderChatSheet();renderChatBtn();
+        });
+      });
+    }
   }
   const foot=$('#csFoot');
-  if(S.mode==='edit'){
+  if(edit){
     foot.innerHTML='<div style="display:flex;gap:8px"><button class="btn" id="csAdd" style="flex:1">＋ 대화 추가</button>'
       +(chats.length?'<button class="btn ghost" id="csClear">전체 삭제</button>':'')+'</div>';
     $('#csAdd').onclick=openChatModal;
@@ -1312,6 +1322,40 @@ function renderChatSheet(){
   }else{
     foot.innerHTML='<div class="fh" style="text-align:center">대화를 수정하려면 상단 [편집]에서 열어주세요</div>';
   }
+}
+function msgsToText(msgs){
+  return (msgs||[]).map(m=>{
+    const nm=m.me?'나':(m.n||'상대');
+    return (m.t?m.t+' ':'')+nm+': '+m.x;
+  }).join('\n');
+}
+function editChatGroup(ci){
+  const c=S.cur.chats[ci];if(!c)return;
+  modal(
+    '<div class="mTitle">대화 편집</div>'
+    +'<div class="fh" style="margin-bottom:10px">한 줄에 하나씩. 형식: <b>시간 이름: 내용</b> (시간은 생략 가능). 내 메시지는 이름을 "나"로.</div>'
+    +'<textarea id="ceRaw" style="min-height:220px">'+esc(msgsToText(c.msgs))+'</textarea>'
+    +'<div class="frow" style="margin:12px 0 0"><div class="fl">내 카톡 대화명</div><input type="text" id="ceMe" value="'+esc(S.set.myName||'')+'" placeholder="예: 수정"></div>'
+    +'<div class="mrowBtn"><button class="btn" id="ceCancel">취소</button><button class="btn pri" id="ceOk">저장</button></div>'
+  );
+  $('#ceCancel').onclick=closeModal;
+  $('#ceOk').onclick=()=>{
+    const raw=$('#ceRaw').value;
+    let msgs=parseKakao(raw);
+    if(!msgs.length&&raw.trim())msgs=parseFree(raw);
+    if(!msgs.length){
+      confirmM('내용이 비었어요. 이 대화 묶음을 삭제할까요?',()=>{
+        S.cur.chats.splice(ci,1);closeModal();touch();renderChatSheet();renderChatBtn();
+      });
+      return;
+    }
+    const me=$('#ceMe').value.trim();
+    if(me!==S.set.myName){S.set.myName=me;saveSettings();renderHeader()}
+    const list=msgs.map(m=>({n:m.name,t:m.time,x:m.text,me:(m.name.trim()==='나')||(!!me&&m.name.trim()===me)}));
+    S.cur.chats[ci]={msgs:list,ts:c.ts||Date.now()};
+    closeModal();touch();renderChatSheet();renderChatBtn();
+    toast('대화를 수정했어요');
+  };
 }
 function openChatSheet(){
   if(!S.cur)return;
