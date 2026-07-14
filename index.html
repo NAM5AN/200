@@ -219,11 +219,11 @@ figure.ph figcaption{font-size:12px;color:var(--tx2);padding:9px 12px}
 .msg.me .mb{background:linear-gradient(180deg,#e8eaef,#c6cbd4);color:#14161a;border-color:#dfe2e8;border-radius:13px 13px 4px 13px}
 .msg.me.gend .mb{border-radius:13px 4px 13px 13px}
 .mt{font-size:9.5px;color:var(--tx3);white-space:nowrap}
-.mact{display:flex;gap:2px;align-self:center;opacity:0;transition:opacity .12s;flex:none}
-.mrow:hover .mact{opacity:1}
-.mact button{appearance:none;background:var(--card2);border:1px solid var(--line2);color:var(--tx2);width:24px;height:24px;border-radius:7px;font-size:11px;cursor:pointer;padding:0;line-height:1;display:flex;align-items:center;justify-content:center}
-.mact button:active{color:var(--tx)}
-@media (hover:none){.mact{opacity:.65}}
+.mact{display:flex;gap:3px;align-self:flex-end;opacity:0;transition:opacity .12s;flex:none;padding-bottom:1px}
+.msg:hover .mact,.msg.actshow .mact{opacity:1}
+.mb{cursor:default}
+.mact button{appearance:none;background:var(--card2);border:1px solid var(--line2);color:var(--tx2);width:26px;height:26px;border-radius:8px;font-size:12px;cursor:pointer;padding:0;line-height:1;display:flex;align-items:center;justify-content:center}
+.mact button:active{color:var(--tx);background:var(--line)}
 .chatMore{text-align:center;font-size:11px;color:var(--tx3);padding:6px 0 0}
 
 /* add bar */
@@ -1308,8 +1308,22 @@ function renderChatSheet(){
     });
     box.innerHTML=h;
     if(edit){
-      box.querySelectorAll('[data-medit]').forEach(b=>b.onclick=()=>{const a=b.dataset.medit.split(':');editMsg(+a[0],+a[1])});
-      box.querySelectorAll('[data-mdel]').forEach(b=>b.onclick=()=>{const a=b.dataset.mdel.split(':');delMsg(+a[0],+a[1])});
+      // 말풍선 탭 → 버튼 토글 (모바일), 다른 말풍선은 닫힘
+      box.querySelectorAll('.msg').forEach(msg=>{
+        const mb=msg.querySelector('.mb');
+        if(mb)mb.addEventListener('click',ev=>{
+          ev.stopPropagation();
+          const on=msg.classList.contains('actshow');
+          box.querySelectorAll('.msg.actshow').forEach(x=>x.classList.remove('actshow'));
+          if(!on)msg.classList.add('actshow');
+        });
+      });
+      box.querySelectorAll('[data-medit]').forEach(b=>b.onclick=ev=>{ev.stopPropagation();const a=b.dataset.medit.split(':');editMsg(+a[0],+a[1])});
+      box.querySelectorAll('[data-mdel]').forEach(b=>b.onclick=ev=>{ev.stopPropagation();const a=b.dataset.mdel.split(':');delMsg(+a[0],+a[1])});
+      box.onclick=ev=>{
+        if(!ev.target.closest('.mb')&&!ev.target.closest('.mact'))
+          box.querySelectorAll('.msg.actshow').forEach(x=>x.classList.remove('actshow'));
+      };
     }
   }
   const foot=$('#csFoot');
