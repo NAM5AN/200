@@ -178,6 +178,18 @@ figure.ph figcaption{font-size:12px;color:var(--tx2);padding:9px 12px}
 .lbCtl{display:flex;justify-content:center;align-items:center;gap:10px;padding:12px 0 calc(16px + env(safe-area-inset-bottom))}
 .lbZoom{font-size:11px;color:var(--tx2);min-width:46px;text-align:center;letter-spacing:.06em}
 
+/* chat sheet */
+#chatSheet{position:fixed;inset:0;z-index:65;background:var(--ink);display:flex;flex-direction:column}
+.csHead{display:flex;justify-content:space-between;align-items:center;padding:calc(14px + env(safe-area-inset-top)) 16px 12px;border-bottom:1px solid var(--line)}
+.csTitle{font-size:15px;font-weight:800}
+.csBody{flex:1;min-height:0;overflow:auto;max-width:520px;width:100%;margin:0 auto;padding:16px}
+.csFoot{max-width:520px;width:100%;margin:0 auto;padding:10px 16px calc(14px + env(safe-area-inset-bottom))}
+.csDay{position:sticky;top:0;text-align:center;margin:6px 0 12px;z-index:1}
+.csDay span{font-size:10px;letter-spacing:.14em;color:var(--tx2);background:var(--card2);border:1px solid var(--line);border-radius:999px;padding:4px 12px}
+.csGrp{margin-bottom:20px}
+.csGL{font-size:9px;color:var(--tx3);letter-spacing:.2em;margin-bottom:8px;text-align:center}
+.csEmpty{text-align:center;color:var(--tx3);font-size:13px;padding:40px 20px;line-height:1.8}
+
 /* bgm */
 .bgmCard{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#000;margin-top:14px}
 .bgmCard iframe{width:100%;height:200px;border:0;display:block}
@@ -314,7 +326,7 @@ figure.ph figcaption{font-size:12px;color:var(--tx2);padding:9px 12px}
     <div class="eMeta">
       <div class="eDate chrome" id="eDate">—</div>
       <div class="eSub" id="eSub">—</div>
-      <div><span class="dpill" id="eDday">D+—</span></div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="dpill" id="eDday">D+—</span><button class="btn sm ghost" id="eChatBtn" style="display:none">💬 대화</button></div>
       <div id="eTitleBox"></div>
       <div id="bgmBox"></div>
     </div>
@@ -365,7 +377,6 @@ figure.ph figcaption{font-size:12px;color:var(--tx2);padding:9px 12px}
     <div class="row">
       <button class="btn" id="addText">＋ 글</button>
       <button class="btn" id="addPhoto">＋ 사진·영상</button>
-      <button class="btn" id="addChat">＋ 카톡</button>
     </div>
     <div class="hint">선택한 블록 아래에 추가 · 블록 도구 ↑↓＋✕ 로 이동·삽입·삭제</div>
   </div>
@@ -396,6 +407,14 @@ figure.ph figcaption{font-size:12px;color:var(--tx2);padding:9px 12px}
     <button class="lbBtn" id="lbZoomIn">＋</button>
     <button class="lbBtn" id="lbNext">›</button>
   </div>
+</div>
+<div id="chatSheet" class="hide">
+  <div class="csHead">
+    <div class="csTitle" id="csTitle">💬 대화</div>
+    <button class="lbBtn" id="csClose">✕</button>
+  </div>
+  <div class="csBody" id="csBody"></div>
+  <div class="csFoot" id="csFoot"></div>
 </div>
 <div id="toast"></div>
 <input type="file" id="fileP" accept="image/*,video/*" multiple hidden>
@@ -482,6 +501,7 @@ async function loadEntry(d){
     title:r.data.title||'',
     blocks:Array.isArray(r.data.blocks)?r.data.blocks:[],
     bgm:r.data.bgm||null,
+    chats:Array.isArray(r.data.chats)?r.data.chats:[],
     createdAt:new Date(r.data.created_at).getTime(),
     updatedAt:new Date(r.data.updated_at).getTime()
   };
@@ -496,7 +516,8 @@ async function saveEntry(e,withCreated){
       user_id:UID,entry_date:e.date,title:e.title||'',blocks:e.blocks,
       snippet:snippet(e),
       photo_count:e.blocks.filter(b=>b.type==='photo'||b.type==='video').length,
-      chat_count:e.blocks.filter(b=>b.type==='chat').length,
+      chat_count:(Array.isArray(e.chats)?e.chats.length:0),
+      chats:(Array.isArray(e.chats)&&e.chats.length)?e.chats:null,
       bgm:e.bgm||null,
       updated_at:new Date(e.updatedAt||Date.now()).toISOString()
     };
@@ -618,8 +639,20 @@ async function openEntry(ds){
   $('#blocks').innerHTML='<div class="loading">불러오는 중…</div>';
   let e=await loadEntry(ds);
   let isNew=false;
-  if(!e){isNew=true;e={date:ds,title:'',bgm:null,createdAt:Date.now(),updatedAt:Date.now(),blocks:[{type:'text',text:'',ts:Date.now()}]}}
+  if(!e){isNew=true;e={date:ds,title:'',bgm:null,chats:[],createdAt:Date.now(),updatedAt:Date.now(),blocks:[{type:'text',text:'',ts:Date.now()}]}}
+  // 레거시: 본문에 남아있는 카톡 블록을 대화 보관함으로 이전
+  if(e.blocks&&e.blocks.some(b=>b.type==='chat')){
+    if(!Array.isArray(e.chats))e.chats=[];
+    const kept=[];
+    e.blocks.forEach(b=>{
+      if(b.type==='chat')e.chats.push({msgs:b.msgs||[],ts:b.ts||e.createdAt});
+      else kept.push(b);
+    });
+    e.blocks=kept.length?kept:[{type:'text',text:'',ts:Date.now()}];
+    e._migrated=true;
+  }
   S.cur=e;S.mode=isNew?'edit':'view';S.focus=-1;S.dirty=false;
+  if(e._migrated){delete e._migrated;e.updatedAt=Date.now();await saveEntry(e);updateIndexLocal(e)}
   const meds=e.blocks.filter(b=>(b.type==='photo'||b.type==='video')&&!(b.id in PC));
   await Promise.all(meds.map(async b=>{PC[b.id]=await signName(mediaName(b))}));
   if(e.bgm&&e.bgm.kind==='file'&&!(e.bgm.id in PC)){
@@ -644,6 +677,7 @@ function renderEntry(){
     tb.innerHTML=(e.title&&e.title.trim())?'<div class="eTitleV">'+esc(e.title)+'</div>':'';
   }
   renderBgm();
+  renderChatBtn();
   renderBlocks();
 }
 function toolsHtml(i,n){
@@ -679,11 +713,9 @@ function renderBlocks(){
         h+='<div class="blk" data-i="'+i+'">'+T+'<figure class="ph">'+img+'</figure><input type="text" class="cap" data-i="'+i+'" placeholder="캡션 (선택)" value="'+esc(b.cap||'')+'"></div>';
       }else if(b.type==='video'){
         h+='<div class="blk" data-i="'+i+'">'+T+playerHtml(b)+'<input type="text" class="cap" data-i="'+i+'" placeholder="캡션 (선택)" value="'+esc(b.cap||'')+'"></div>';
-      }else if(b.type==='chat'){
-        h+='<div class="blk" data-i="'+i+'">'+T+chatBoxHtml(b,i)+'</div>';
       }
     });
-    h+='<div class="inlineAdd"><button class="btn" data-add="text">＋ 글</button><button class="btn" data-add="photo">＋ 사진·영상</button><button class="btn" data-add="chat">＋ 카톡</button></div>';
+    h+='<div class="inlineAdd"><button class="btn" data-add="text">＋ 글</button><button class="btn" data-add="photo">＋ 사진·영상</button></div>';
   }else{
     h=renderView(e);
     if(!h)h='<div class="loading">아직 내용이 없어요</div>';
@@ -702,10 +734,6 @@ function playerHtml(b){
       +'<span class="vdur">0:00</span><button class="vmute">🔊</button>'
       +'<input type="range" class="vvol" min="0" max="1" step="0.05" value="1"></div></div>'
     :'<div class="phEmpty">영상을 불러올 수 없어요</div>';
-}
-function chatBoxHtml(b,i){
-  return '<div class="chatbox" data-i="'+i+'"><div class="chatHd"><span class="l lat">Kakao Log · '+b.msgs.length+'</span></div>'
-    +chatHtml(b.msgs,b.open?0:12)+'</div>';
 }
 function renderView(e){
   const groups=[];let g=null,lastKey=null;
@@ -744,8 +772,6 @@ function renderGroupItems(items){
       if(b.text.trim())h+='<div class="blk"><div class="v-tx">'+esc(b.text)+'</div></div>';
     }else if(b.type==='video'){
       h+='<div class="blk">'+playerHtml(b)+(b.cap?'<div class="vcap">'+esc(b.cap)+'</div>':'')+'</div>';
-    }else if(b.type==='chat'){
-      h+='<div class="blk">'+chatBoxHtml(b,it.i)+'</div>';
     }
   }
   flush();
@@ -928,8 +954,7 @@ $('#blocks').addEventListener('click',e=>{
   if(ab){
     const p=S.cur.blocks.length;
     if(ab.dataset.add==='text')doAddText(p);
-    else if(ab.dataset.add==='photo')doAddPhoto(p);
-    else doAddChat(p);
+    else doAddPhoto(p);
     return;
   }
   const btn=e.target.closest('[data-act]');
@@ -954,7 +979,7 @@ $('#blocks').addEventListener('click',e=>{
       S.focus=-1;touch();renderBlocks();
     };
     if(b.type==='text'&&!b.text.trim())doDel();
-    else confirmM(b.type==='photo'?'이 사진을 지울까요?':b.type==='video'?'이 영상을 지울까요?':b.type==='chat'?'이 대화 기록을 지울까요?':'이 문단을 지울까요?',doDel);
+    else confirmM(b.type==='photo'?'이 사진을 지울까요?':b.type==='video'?'이 영상을 지울까요?':'이 문단을 지울까요?',doDel);
   }
 });
 function markFocus(){
@@ -967,7 +992,7 @@ $('#eMode').onclick=async()=>{
   if(S.mode==='view'){S.mode='edit';renderEntry()}
   else{await flushSave(true);S.mode='view';renderEntry()}
 };
-$('#eBack').onclick=async()=>{await flushSave();stopBgm();bgmKey=null;S.cur=null;show('cal');renderCal();renderRecent()};
+$('#eBack').onclick=async()=>{await flushSave();stopBgm();bgmKey=null;closeChatSheet();S.cur=null;show('cal');renderCal();renderRecent()};
 $('#eDel').onclick=()=>{
   const e=S.cur;if(!e)return;
   confirmM(fmtDate(e.date)+' 일기를 완전히 삭제할까요?',async()=>{
@@ -980,7 +1005,7 @@ $('#eDel').onclick=()=>{
     stopBgm();bgmKey=null;
     await deleteEntryRow(e.date);
     S.idx=S.idx.filter(o=>o.d!==e.date);
-    S.cur=null;show('cal');renderCal();renderRecent();toast('삭제됐어요');
+    closeChatSheet();S.cur=null;show('cal');renderCal();renderRecent();toast('삭제됐어요');
   });
 };
 
@@ -1012,16 +1037,16 @@ function snippet(e){
   if(t)return t.text.trim().replace(/\s+/g,' ').slice(0,42);
   if(e.blocks.some(b=>b.type==='photo'))return '사진 기록';
   if(e.blocks.some(b=>b.type==='video'))return '영상 기록';
-  if(e.blocks.some(b=>b.type==='chat'))return '대화 기록';
+  if(Array.isArray(e.chats)&&e.chats.length)return '대화 '+e.chats.reduce((s,c)=>s+(c.msgs?c.msgs.length:0),0)+'개';
   return '';
 }
-function isEmpty(e){return !e.bgm&&!(e.title&&e.title.trim())&&e.blocks.every(b=>b.type==='text'&&!b.text.trim())}
+function isEmpty(e){return !e.bgm&&!(Array.isArray(e.chats)&&e.chats.length)&&!(e.title&&e.title.trim())&&e.blocks.every(b=>b.type==='text'&&!b.text.trim())}
 function updateIndexLocal(e){
   const i=S.idx.findIndex(o=>o.d===e.date);
   if(isEmpty(e)){
     if(i>=0)S.idx.splice(i,1);
   }else{
-    const row={d:e.date,s:snippet(e),p:e.blocks.filter(b=>b.type==='photo'||b.type==='video').length,c:e.blocks.filter(b=>b.type==='chat').length};
+    const row={d:e.date,s:snippet(e),p:e.blocks.filter(b=>b.type==='photo'||b.type==='video').length,c:(Array.isArray(e.chats)?e.chats.length:0)};
     if(i>=0)S.idx[i]=row;else S.idx.push(row);
     S.idx.sort((a,b)=>a.d<b.d?1:-1);
   }
@@ -1035,9 +1060,9 @@ function doAddText(p){
   const ta=document.querySelector('.blk[data-i="'+p+'"] textarea');
   if(ta)ta.focus();
 }
-let photoPos=0,chatPos=0;
+let photoPos=0;
 function doAddPhoto(p){photoPos=p;$('#fileP').value='';$('#fileP').click()}
-function doAddChat(p){chatPos=p;openChatModal()}
+
 $('#addText').onclick=()=>doAddText(insertPos());
 $('#addPhoto').onclick=()=>doAddPhoto(insertPos());
 $('#fileP').addEventListener('change',async e=>{
@@ -1096,7 +1121,6 @@ async function compress(file){
 }
 
 /* ── kakao chat ── */
-$('#addChat').onclick=()=>doAddChat(insertPos());
 function openChatModal(){
   modal(
     '<div class="mTitle">카톡 대화 불러오기</div>'
@@ -1124,10 +1148,12 @@ function openChatModal(){
     const defT=($('#chatTime')?$('#chatTime').value.trim():'');
     if(defT)msgs.forEach(m=>{if(!m.time)m.time=defT});
     const list=msgs.map(m=>({n:m.name,t:m.time,x:m.text,me:(m.name.trim()==='나')||(!!me&&m.name.trim()===me)}));
-    const p=chatPos;
-    S.cur.blocks.splice(p,0,{type:'chat',msgs:list,open:false,ts:Date.now()});
-    S.focus=p;touch();renderBlocks();closeModal();
-    toast(list.length+'개 메시지를 가져왔어요'+(free?' (자유 텍스트 인식)':''));
+    if(!Array.isArray(S.cur.chats))S.cur.chats=[];
+    S.cur.chats.push({msgs:list,ts:Date.now()});
+    touch();closeModal();
+    renderChatBtn();
+    if($('#chatSheet').classList.contains('hide'))openChatSheet();else renderChatSheet();
+    toast(list.length+'개 메시지를 저장했어요'+(free?' (자유 텍스트 인식)':''));
   };
 }
 function parseKakao(raw){
@@ -1176,6 +1202,68 @@ function parseFree(raw){
   }
   return msgs;
 }
+
+/* ── chat sheet ── */
+function chatCount(e){
+  if(!e||!Array.isArray(e.chats))return 0;
+  return e.chats.reduce((s,c)=>s+(c.msgs?c.msgs.length:0),0);
+}
+function renderChatBtn(){
+  const btn=$('#eChatBtn'),e=S.cur;
+  if(!btn)return;
+  const n=chatCount(e);
+  if(S.mode==='edit'){
+    btn.style.display='inline-flex';
+    btn.textContent=n?('💬 대화 '+n):'💬 대화 추가';
+  }else if(n){
+    btn.style.display='inline-flex';
+    btn.textContent='💬 대화 '+n;
+  }else{
+    btn.style.display='none';
+  }
+}
+$('#eChatBtn').onclick=()=>{
+  if(S.mode==='edit'&&!chatCount(S.cur))openChatModal();
+  else openChatSheet();
+};
+function renderChatSheet(){
+  const e=S.cur;
+  const box=$('#csBody');
+  $('#csTitle').textContent='💬 '+fmtDate(e.date)+' 대화';
+  const chats=Array.isArray(e.chats)?e.chats:[];
+  if(!chats.length){
+    box.innerHTML='<div class="csEmpty">아직 저장된 대화가 없어요.<br>아래 버튼으로 그날 나눈 카톡을 붙여넣어 보관하세요.</div>';
+  }else{
+    let h='';
+    chats.forEach(c=>{
+      h+='<div class="csGrp">'
+        +(c.ts?'<div class="csGL lat">'+fmtTime(c.ts)+' 저장</div>':'')
+        +chatHtml(c.msgs||[],0)+'</div>';
+    });
+    box.innerHTML=h;
+  }
+  const foot=$('#csFoot');
+  if(S.mode==='edit'){
+    foot.innerHTML='<div style="display:flex;gap:8px"><button class="btn" id="csAdd" style="flex:1">＋ 대화 추가</button>'
+      +(chats.length?'<button class="btn ghost" id="csClear">전체 삭제</button>':'')+'</div>';
+    $('#csAdd').onclick=openChatModal;
+    const cl=$('#csClear');
+    if(cl)cl.onclick=()=>confirmM('저장된 대화를 모두 지울까요?',()=>{S.cur.chats=[];touch();renderChatSheet();renderChatBtn()});
+  }else{
+    foot.innerHTML='<div class="fh" style="text-align:center">대화를 수정하려면 상단 [편집]에서 열어주세요</div>';
+  }
+}
+function openChatSheet(){
+  if(!S.cur)return;
+  renderChatSheet();
+  document.body.style.overflow='hidden';
+  $('#chatSheet').classList.remove('hide');
+}
+function closeChatSheet(){
+  $('#chatSheet').classList.add('hide');
+  document.body.style.overflow='';
+}
+$('#csClose').onclick=closeChatSheet;
 
 /* ── quick capture ── */
 const QP={h:[],e:[]};
@@ -1531,7 +1619,7 @@ $('#fileI').addEventListener('change',async e=>{
       }
       for(const d in (data.entries||{})){
         const src=data.entries[d];
-        const en={date:d,title:src.title||'',bgm:src.bgm||null,blocks:Array.isArray(src.blocks)?src.blocks:[],createdAt:src.createdAt||Date.now(),updatedAt:src.updatedAt||Date.now()};
+        const en={date:d,title:src.title||'',bgm:src.bgm||null,chats:Array.isArray(src.chats)?src.chats:[],blocks:Array.isArray(src.blocks)?src.blocks:[],createdAt:src.createdAt||Date.now(),updatedAt:src.updatedAt||Date.now()};
         await saveEntry(en,true);
       }
       if(data.settings&&data.settings.startDate){S.set=Object.assign(S.set,data.settings);await saveSettings()}
