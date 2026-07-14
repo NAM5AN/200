@@ -1105,6 +1105,7 @@ function openChatModal(){
     +'<button class="btn" id="chatOcr" style="width:100%;margin-top:10px">📷 스크린샷에서 대화 추출 (최대 5장)</button>'
     +'<div class="chkRow"><input type="checkbox" id="chatOnlyDate" checked><label for="chatOnlyDate">이 일기 날짜('+fmtDate(S.cur.date)+')의 메시지만 가져오기</label></div>'
     +'<div class="frow" style="margin:12px 0 0"><div class="fl">내 카톡 대화명 (내 말풍선 구분용)</div><input type="text" id="chatMe" placeholder="예: 수정" value="'+esc(S.set.myName||'')+'"></div>'
+    +'<div class="frow" style="margin:12px 0 0"><div class="fl">기본 시간 (선택) — 시간 정보가 없는 메시지에 표시돼요</div><input type="text" id="chatTime" placeholder="예: 오후 9:30"></div>'
     +'<div class="mrowBtn"><button class="btn" id="chatCancel">취소</button><button class="btn pri" id="chatOk">추가</button></div>'
   );
   $('#chatCancel').onclick=closeModal;
@@ -1120,6 +1121,8 @@ function openChatModal(){
     if(msgs.length>1500){msgs=msgs.slice(0,1500);toast('메시지가 많아 1500개까지만 가져왔어요')}
     const me=$('#chatMe').value.trim();
     if(me!==S.set.myName){S.set.myName=me;saveSettings();renderHeader()}
+    const defT=($('#chatTime')?$('#chatTime').value.trim():'');
+    if(defT)msgs.forEach(m=>{if(!m.time)m.time=defT});
     const list=msgs.map(m=>({n:m.name,t:m.time,x:m.text,me:(m.name.trim()==='나')||(!!me&&m.name.trim()===me)}));
     const p=chatPos;
     S.cur.blocks.splice(p,0,{type:'chat',msgs:list,open:false,ts:Date.now()});
@@ -1154,17 +1157,21 @@ function parseKakao(raw){
 }
 function parseFree(raw){
   const msgs=[];
-  const reNT=/^(.{1,20}?)\s*[:：]\s*(.+)$/;
+  const reTime=/^((?:오전|오후)?\s*\d{1,2}:\d{2})\s+([\s\S]+)$/;
+  const reNT=/^(.{1,20}?)\s*[:：]\s*([\s\S]+)$/;
   for(const line of raw.split(/\r?\n/)){
-    const t=line.trim();
+    let t=line.trim();
     if(!t)continue;
+    let time='';
+    const tm=t.match(reTime);
+    if(tm){time=tm[1].replace(/\s+/g,' ').trim();t=tm[2].trim()}
     const m=t.match(reNT);
     if(m&&!/^https?$/i.test(m[1].trim())&&!/^\d{1,2}$/.test(m[1].trim())){
-      msgs.push({date:null,time:'',name:m[1].trim(),text:m[2]});
-    }else if(msgs.length){
+      msgs.push({date:null,time:time,name:m[1].trim(),text:m[2]});
+    }else if(msgs.length&&!time){
       msgs[msgs.length-1].text+='\n'+t;
     }else{
-      msgs.push({date:null,time:'',name:(S.set.partnerName||'상대'),text:t});
+      msgs.push({date:null,time:time,name:(S.set.partnerName||'상대'),text:t});
     }
   }
   return msgs;
