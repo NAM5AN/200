@@ -229,6 +229,14 @@ figure.ph figcaption{font-size:12px;color:var(--tx2);padding:9px 12px}
 .mb{cursor:default}
 .mact button{appearance:none;background:var(--card2);border:1px solid var(--line2);color:var(--tx2);width:26px;height:26px;border-radius:8px;font-size:12px;cursor:pointer;padding:0;line-height:1;display:flex;align-items:center;justify-content:center}
 .mact button:active{color:var(--tx);background:var(--line)}
+/* 답장 인용 */
+.mreply{max-width:78%;margin-bottom:3px;padding:6px 10px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid var(--line);border-left:2px solid var(--line2);cursor:pointer;align-self:flex-start}
+.msg.me .mreply{align-self:flex-end;border-left:0;border-right:2px solid #b9bec8}
+.mreply:active{background:rgba(255,255,255,.09)}
+.mrq-n{font-size:10px;color:var(--tx2);font-weight:700;margin-bottom:2px}
+.mrq-t{font-size:11.5px;color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msg.mhl .mb{animation:hlpulse 1.4s ease}
+@keyframes hlpulse{0%,100%{box-shadow:0 0 0 0 rgba(217,220,227,0)}30%{box-shadow:0 0 0 3px rgba(217,220,227,.5)}}
 .chatMore{text-align:center;font-size:11px;color:var(--tx3);padding:6px 0 0}
 
 /* add bar */
@@ -576,6 +584,7 @@ async function downloadPhotoB64(id){
 
 /* ── screens ── */
 function show(name){
+  if(name!=='entry'&&typeof stopBgm==='function'){stopBgm();bgmKey=null;}
   ['auth','cal','entry','set'].forEach(n=>$('#scr-'+n).classList.toggle('hide',n!==name));
   $('#addbar').classList.toggle('hide',!(name==='entry'&&S.mode==='edit'));
   $('#qbar').classList.toggle('hide',!(name==='entry'&&S.mode==='view'));
@@ -716,7 +725,19 @@ function chatHtml(msgs,limit,ctx){
     const acts=(ctx!=null)?'<span class="mact"><button data-medit="'+ctx+':'+i+'" title="편집">✎</button><button data-mdel="'+ctx+':'+i+'" title="삭제">🗑</button></span>':'';
     const timeTxt=(last&&m.t)?'<span class="mt">'+esc(m.t)+'</span>':'';
     const side=(acts||timeTxt)?'<span class="mside'+(acts?' hasact':'')+'">'+timeTxt+acts+'</span>':'';
-    h+='<div class="msg'+(me?' me':'')+(last?' gend':'')+'">'
+    // 답장 인용 박스
+    let reply='';
+    if(m.replyTo){
+      const tgt=(m.replyId!=null&&list[m.replyId])?list[m.replyId]:null;
+      const who=tgt?(tgt.me?'나':(tgt.n||m.replyTo)):m.replyTo;
+      const q=(tgt?tgt.x:m.replyQuote)||'';
+      reply='<div class="mreply"'+(m.replyId!=null?' data-goto="'+m.replyId+'"':'')+'>'
+        +'<div class="mrq-n">'+esc(who)+'</div>'
+        +'<div class="mrq-t">'+esc(q.replace(/\n/g,' ').slice(0,60))+'</div></div>';
+    }
+    const mid=(ctx!=null?ctx:'v')+'_'+i;
+    h+='<div class="msg'+(me?' me':'')+(last?' gend':'')+'" id="msg_'+mid+'" data-mid="'+i+'">'
+      +reply
       +'<div class="mrow"><div class="mb">'+esc(m.x)+'</div>'
       +side
       +'</div></div>';
@@ -1220,7 +1241,9 @@ function openChatModal(){
     if(me!==S.set.myName){S.set.myName=me;saveSettings();renderHeader()}
     const defT=($('#chatTime')?$('#chatTime').value.trim():'');
     if(defT)msgs.forEach(m=>{if(!m.time)m.time=defT});
-    const list=msgs.map(m=>({n:m.name,t:m.time,x:m.text,me:(m.name.trim()==='나')||(!!me&&m.name.trim()===me)}));
+    detectReplies(msgs);
+    const list=msgs.map(m=>({n:m.name,t:m.time,x:m.text,me:(m.name.trim()==='나')||(!!me&&m.name.trim()===me),replyTo:m.replyTo||null,replyQuote:m.replyQuote||null}));
+    linkReplies(list);
     if(!Array.isArray(S.cur.chats))S.cur.chats=[];
     S.cur.chats.push({msgs:list,ts:Date.now()});
     touch();closeModal();
@@ -1253,6 +1276,51 @@ function parseKakao(raw){
     }
   }
   return msgs.filter(m=>m.text&&m.text.trim());
+}
+// 카톡 답장 인식: "ㅇㅇㅇ님에게 답장" 헤더가 있으면 인용부를 분리
+function detectReplies(list){
+  const reReply=/^(.+?)님에게\s*답장\s*\n([\s\S]*)$/;
+  for(const m of list){
+    const mm=(m.text||'').match(reReply);
+    if(!mm)continue;
+    const target=mm[1].trim();
+    let body=mm[2];
+    const parts=body.split(/\n\s*\n/);
+    let quote,reply;
+    if(parts.length>=2){
+      quote=parts[0].trim();
+      reply=parts.slice(1).join('\n').trim();
+    }else{
+      const lines=body.split('\n');
+      quote=(lines[0]||'').trim();
+      reply=lines.slice(1).join('\n').trim();
+      if(!reply){reply=quote;quote=''}
+    }
+    m.replyTo=target;
+    m.replyQuote=quote;
+    m.text=reply||body.trim();
+  }
+  return list;
+}
+// 답장을 실제 원본 메시지(id)에 연결
+function linkReplies(list){
+  list.forEach((m,i)=>m._id=i);
+  for(const m of list){
+    if(!m.replyTo)continue;
+    let best=-1;
+    for(let j=m._id-1;j>=0;j--){
+      const c=list[j];
+      const nameHit=(c.n||'').trim()===m.replyTo.trim()||(c.me&&m.replyTo.trim()==='나');
+      if(!nameHit)continue;
+      if(m.replyQuote){
+        const q=m.replyQuote.replace(/\s+/g,'');
+        const t=(c.x||'').replace(/\s+/g,'');
+        if(t&&(t.indexOf(q)>=0||q.indexOf(t)>=0)){best=j;break}
+      }else if(best<0){best=j}
+    }
+    if(best>=0)m.replyId=best;
+  }
+  return list;
 }
 function parseFree(raw){
   const msgs=[];
@@ -1299,6 +1367,20 @@ $('#eChatBtn').onclick=()=>{
   if(S.mode==='edit'&&!chatCount(S.cur))openChatModal();
   else openChatSheet();
 };
+function wireReplyJump(box){
+  box.querySelectorAll('[data-goto]').forEach(el=>{
+    el.onclick=ev=>{
+      ev.stopPropagation();
+      const grp=el.closest('.csGrp');
+      const tid=el.dataset.goto;
+      const target=grp?grp.querySelector('.msg[data-mid="'+tid+'"]'):null;
+      if(!target)return;
+      target.scrollIntoView({behavior:'smooth',block:'center'});
+      target.classList.remove('mhl');void target.offsetWidth;target.classList.add('mhl');
+      setTimeout(()=>target.classList.remove('mhl'),1400);
+    };
+  });
+}
 function renderChatSheet(){
   const e=S.cur;
   const box=$('#csBody');
@@ -1330,6 +1412,9 @@ function renderChatSheet(){
         if(!ev.target.closest('.mb')&&!ev.target.closest('.mact'))
           box.querySelectorAll('.msg.actshow').forEach(x=>x.classList.remove('actshow'));
       };
+      wireReplyJump(box);
+    }else{
+      wireReplyJump(box);
     }
   }
   const foot=$('#csFoot');
@@ -1352,8 +1437,13 @@ function delMsg(ci,mi){
 function editMsg(ci,mi){
   const c=S.cur.chats[ci];if(!c||!c.msgs)return;
   const m=c.msgs[mi];
+  const tgt=(m.replyId!=null&&c.msgs[m.replyId])?c.msgs[m.replyId]:null;
+  const replyInfo=m.replyTo
+    ?'<div class="frow"><div class="fl">답장 대상</div><div class="mreply" style="cursor:default;max-width:100%"><div class="mrq-n">'+esc(tgt?(tgt.me?'나':tgt.n):m.replyTo)+'</div><div class="mrq-t">'+esc(((tgt?tgt.x:m.replyQuote)||'').replace(/\n/g,' ').slice(0,60))+'</div></div><label class="chkRow"><input type="checkbox" id="emUnreply"> 답장 연결 해제</label></div>'
+    :'';
   modal(
     '<div class="mTitle">메시지 편집</div>'
+    +replyInfo
     +'<div class="frow"><div class="fl">보낸 사람</div><input type="text" id="emName" value="'+esc(m.me?'나':(m.n||''))+'" placeholder="이름 (내 메시지는 나)"></div>'
     +'<div class="frow"><div class="fl">시간 (선택)</div><input type="text" id="emTime" value="'+esc(m.t||'')+'" placeholder="예: 오전 3:04"></div>'
     +'<div class="frow"><div class="fl">내용</div><textarea id="emText" style="min-height:90px">'+esc(m.x||'')+'</textarea></div>'
@@ -1369,6 +1459,8 @@ function editMsg(ci,mi){
     m.t=$('#emTime').value.trim();
     m.x=tx;
     m.me=(nm==='나')||(!!me&&nm===me);
+    const un=$('#emUnreply');
+    if(un&&un.checked){m.replyTo=null;m.replyId=null;m.replyQuote=null}
     closeModal();touch();renderChatSheet();renderChatBtn();
     toast('메시지를 수정했어요');
   };
@@ -1507,7 +1599,12 @@ document.addEventListener('paste',async e=>{
 
 /* ── BGM ── */
 let bgmAudio=null,bgmKey=null,bgmVolPref=0.7;
-function stopBgm(){if(bgmAudio){try{bgmAudio.pause()}catch(e){}bgmAudio=null}updBgmBtn()}
+function stopBgm(){
+  if(bgmAudio){try{bgmAudio.pause()}catch(e){}bgmAudio=null}
+  const box=$('#bgmBox');
+  if(box){const f=box.querySelector('iframe');if(f)f.remove();box.dataset.k=''}
+  updBgmBtn();
+}
 function updBgmBtn(){const b=$('#bgmPlay');if(b)b.textContent=(bgmAudio&&!bgmAudio.paused)?'❚❚':'▶'}
 function setupBgm(){
   const e=S.cur;
